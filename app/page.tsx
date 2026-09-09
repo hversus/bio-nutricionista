@@ -1,4 +1,181 @@
 "use client";
-import { useState } from "react";
-const steps=[{message:"O que mais te trouxe até aqui hoje?",options:["Emagrecimento","Saúde intestinal","Compulsão alimentar","Reeducação alimentar","Hipertrofia","Nutrição esportiva","Outro"]},{message:"Quais dessas dificuldades aparecem com mais frequência?",options:["Inchaço","Gases","Prisão de ventre","Cansaço","Ansiedade com comida","Dificuldade de seguir uma rotina","Efeito sanfona","Intestino irregular","Nenhuma dessas"],multi:true},{message:"Há quanto tempo isso te incomoda?",options:["Menos de 6 meses","De 6 meses a 1 ano","De 1 a 3 anos","Mais de 3 anos","Há tanto tempo que já considerei normal"]},{message:"O que você já tentou antes?",options:["Dieta por conta própria","Consulta com nutricionista","Remédio para emagrecer","Academia ou treino","Cortar glúten, lactose ou açúcar","Probióticos ou suplementos","Protocolos da internet","Ainda não tentei nada"],multi:true},{message:"Qual opção combina mais com o seu momento?",options:["Quero agendar uma consulta","Quero entender como funciona","Quero saber valores","Ainda estou pesquisando"]},{message:"Para eu te receber melhor, como você se chama?",field:true},{message:"Qual WhatsApp é melhor para falar com você?",field:true},{message:"Em qual cidade você está?",field:true},{message:"Se quiser, deixe seu Instagram.",field:true},{message:"Qual o melhor horário para eu te chamar?",field:true}];
-export default function Home(){const [i,setI]=useState(-1),[msgs,setMsgs]=useState<{me:boolean;text:string}[]>([]),[a,setA]=useState<Record<number,string|string[]>>({}),[draft,setDraft]=useState(""),[typing,setTyping]=useState(false),[consent,setConsent]=useState(false),[sent,setSent]=useState(false),[error,setError]=useState("");const s=steps[i];function advance(v:string){if(!s)return;const answer=s.multi?((a[i] as string[])||[]).join(", "):v.trim();if(!answer)return;setMsgs(m=>[...m,{me:true,text:answer}]);setA(x=>({...x,[i]:s.multi?(x[i] as string[]||[]):v}));setDraft("");setTyping(true);setTimeout(()=>{setTyping(false);setI(x=>x+1)},550)}function select(v:string){if(!s)return;if(s.multi){const old=(a[i] as string[])||[];setA(x=>({...x,[i]:old.includes(v)?old.filter(q=>q!==v):[...old,v]}))}else advance(v)}async function submit(){if(!consent){setError("Marque o consentimento para concluir.");return}const r=await fetch("/api/leads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nome:a[5],whatsapp:a[6],cidade:a[7],instagram:a[8],horario:a[9],objetivo:a[0],sintomas:a[1],tempo:a[2],tentativas:a[3],nivel_interesse:a[4],consentimento:true})});if(!r.ok){setError("Não consegui enviar agora. Tente novamente.");return}setSent(true)}if(sent)return <main className="min-h-screen bg-[#dfe6e8] p-5"><div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-md flex-col justify-center rounded-[2rem] bg-[#e8ded0] p-6 text-center shadow-2xl"><div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#008f7a] text-2xl text-white">✓</div><h1 className="text-2xl font-semibold">Mensagem enviada 💚</h1><p className="mt-3 text-sm leading-relaxed text-ink/65">Recebi suas respostas e vou falar com você com carinho.</p></div></main>;return <main className="min-h-screen bg-[#dfe6e8] sm:p-5"><div className="mx-auto flex min-h-screen max-w-md flex-col overflow-hidden bg-[#e8ded0] shadow-2xl sm:min-h-[calc(100vh-2.5rem)] sm:rounded-[2rem]"><header className="flex items-center gap-3 bg-[#008f7a] px-4 py-3 text-white"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#d8bda0] text-lg font-bold text-[#008f7a]">V</div><div className="flex-1"><p className="font-semibold">Vitória Serafim</p><p className="text-xs text-white/75">{typing?"digitando...":"online agora"}</p></div><div className="flex items-center gap-5 text-lg text-white/80"><span>▣</span><span>☎</span><span>⋮</span></div></header>{i<0?<section className="flex flex-1 flex-col justify-end bg-[radial-gradient(#c9d0d2_1px,transparent_1px)] bg-[size:18px_18px] p-5 pb-8"><div className="mx-auto mb-4 w-fit rounded-lg bg-[#f2eee8] px-4 py-2 text-center text-xs text-[#67727a]">HOJE</div><div className="mb-5 rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-[15px] leading-relaxed shadow-sm">🔒 Suas respostas são confidenciais e só serão usadas para organizar seu primeiro contato.</div><div className="mb-6 rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-[15px] shadow-sm">Oi! Eu sou a Vitória, nutricionista do seu intestino. 💚</div><button onClick={()=>{setI(0);setTyping(true);setTimeout(()=>setTyping(false),600)}} className="w-full rounded-xl bg-[#008f7a] px-5 py-3.5 font-semibold text-white">Quero conversar</button></section>:i<steps.length?<section className="flex flex-1 flex-col bg-[radial-gradient(#c9d0d2_1px,transparent_1px)] bg-[size:18px_18px] p-4"><div className="flex-1 overflow-y-auto pt-2">{msgs.map((m,n)=><div key={n} className={`mb-3 max-w-[86%] rounded-2xl px-4 py-3 text-sm shadow-sm ${m.me?"ml-auto rounded-tr-sm bg-[#d9fdd3]":"rounded-tl-sm bg-white"}`}>{m.text}</div>)}{typing?<div className="mb-3 w-fit rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm text-[#008f7a] shadow-sm">•••</div>:<><div className="mb-3 max-w-[90%] rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-[15px] shadow-sm">{s.message}</div>{s.options&&<div className="space-y-2 pl-3">{s.options.map(o=><button key={o} onClick={()=>select(o)} className={`block w-full rounded-xl bg-white px-4 py-3 text-left text-sm shadow-sm ${s.multi&&(a[i] as string[]||[]).includes(o)?"ring-2 ring-[#536f63]":""}`}>{o}</button>)}{s.multi&&<button onClick={()=>advance("")} className="w-full rounded-xl bg-[#008f7a] px-4 py-3 text-sm font-semibold text-white">Enviar respostas</button>}</div>}</>}</div>{!s.options&&<div className="flex gap-2 border-t border-[#b7a98f] pt-3"><input autoFocus value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==="Enter"&&advance(draft)} placeholder="Digite uma mensagem" className="min-w-0 flex-1 rounded-full border-0 bg-white px-4 py-3 text-sm outline-none"/><button onClick={()=>advance(draft)} className="flex h-11 w-11 items-center justify-center rounded-full bg-[#008f7a] text-xl text-white">➤</button></div>}</section>:<section className="flex flex-1 flex-col justify-center bg-[radial-gradient(#c9d0d2_1px,transparent_1px)] bg-[size:18px_18px] p-5"><div className="mb-6 rounded-2xl rounded-tl-sm bg-white p-5 shadow-sm"><p className="text-[15px] leading-relaxed">Obrigada por me contar tudo isso. Posso usar suas respostas para organizar nosso primeiro contato?</p><p className="mt-3 text-xs leading-relaxed text-ink/60">Este formulário não substitui consulta, não realiza diagnóstico e não garante resultado.</p></div><label className="flex gap-3 text-sm leading-relaxed"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} className="mt-1 h-5 w-5 accent-[#536f63]"/>Concordo que minhas respostas sejam usadas apenas para triagem inicial e organização do contato profissional.</label>{error&&<p className="mt-3 text-sm text-red-700">{error}</p>}<button onClick={submit} className="mt-6 w-full rounded-xl bg-[#008f7a] px-6 py-3.5 font-semibold text-white">Enviar mensagem</button></section>}<footer className="bg-[#e8ded0] py-3 text-center text-[11px] text-ink/45">Suas informações são tratadas com sigilo.</footer></div></main>}
+
+import Image from "next/image";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+
+type Step = { message: string; options?: string[]; multi?: boolean; field?: boolean };
+type Answer = string | string[];
+
+const steps: Step[] = [
+  { message: "O que mais te trouxe até aqui hoje?", options: ["Emagrecimento", "Saúde intestinal", "Compulsão alimentar", "Reeducação alimentar", "Hipertrofia", "Nutrição esportiva", "Outro"] },
+  { message: "Quais dessas dificuldades aparecem com mais frequência?", options: ["Inchaço", "Gases", "Prisão de ventre", "Cansaço", "Ansiedade com comida", "Dificuldade de seguir uma rotina", "Efeito sanfona", "Intestino irregular", "Nenhuma dessas"], multi: true },
+  { message: "Há quanto tempo isso te incomoda?", options: ["Menos de 6 meses", "De 6 meses a 1 ano", "De 1 a 3 anos", "Mais de 3 anos", "Há tanto tempo que já considerei normal"] },
+  { message: "O que você já tentou antes?", options: ["Dieta por conta própria", "Consulta com nutricionista", "Remédio para emagrecer", "Academia ou treino", "Cortar glúten, lactose ou açúcar", "Probióticos ou suplementos", "Protocolos da internet", "Ainda não tentei nada"], multi: true },
+  { message: "Qual opção combina mais com o seu momento?", options: ["Quero agendar uma consulta", "Quero entender como funciona", "Quero saber valores", "Ainda estou pesquisando"] },
+  { message: "Para eu te receber melhor, como você se chama?", field: true },
+  { message: "Qual WhatsApp é melhor para falar com você?", field: true },
+  { message: "Em qual cidade você está?", field: true },
+  { message: "Se quiser, deixe seu Instagram.", field: true },
+  { message: "Qual o melhor horário para eu te chamar?", field: true },
+];
+
+const iconProps = { fill: "none", stroke: "currentColor", strokeLinecap: "round" as const, strokeLinejoin: "round" as const, strokeWidth: 1.8 };
+
+function Icon({ children, size = 22 }: { children: ReactNode; size?: number }) {
+  return <svg aria-hidden="true" height={size} viewBox="0 0 24 24" width={size} {...iconProps}>{children}</svg>;
+}
+
+function ChatHeader({ typing }: { typing: boolean }) {
+  return (
+    <header className="chat-header">
+      <button aria-label="Voltar" className="header-action header-back" type="button"><Icon size={25}><path d="m15 18-6-6 6-6" /></Icon></button>
+      <Image alt="Foto de perfil de Luana Turque" className="profile-photo" height={42} priority src="/profile.jpg" width={42} />
+      <div className="profile-copy"><strong>Luana Turque</strong><span>{typing ? "digitando..." : "online"}</span></div>
+      <div className="header-actions">
+        <button aria-label="Videochamada" className="header-action" type="button"><Icon><rect height="12" rx="2" width="14" x="2.5" y="6" /><path d="m16.5 10 4-2.5v9l-4-2.5" /></Icon></button>
+        <button aria-label="Ligação" className="header-action" type="button"><Icon><path d="M7.1 3.5 9.5 7l-2 2a15.5 15.5 0 0 0 7.5 7.5l2-2 3.5 2.4-.8 3a2 2 0 0 1-2 1.5C9.4 20.8 3.2 14.6 2.6 6.3a2 2 0 0 1 1.5-2Z" /></Icon></button>
+        <button aria-label="Mais opções" className="header-action" type="button"><Icon><circle cx="12" cy="5" fill="currentColor" r="1" stroke="none" /><circle cx="12" cy="12" fill="currentColor" r="1" stroke="none" /><circle cx="12" cy="19" fill="currentColor" r="1" stroke="none" /></Icon></button>
+      </div>
+    </header>
+  );
+}
+
+function PrivacyNotice() {
+  return (
+    <div className="privacy-notice">
+      <Icon size={12}><rect height="8" rx="1" width="8" x="8" y="11" /><path d="M10 11V8.8a2 2 0 0 1 4 0V11" /></Icon>
+      <span>Suas respostas são confidenciais e só a Luana lê. Luana Turque<br />Nutrição · CRN-4 19100494.</span>
+    </div>
+  );
+}
+
+function MessageBubble({ children, mine = false }: { children: ReactNode; mine?: boolean }) {
+  return <div className={`message-bubble ${mine ? "message-mine" : "message-luana"}`}>{children}</div>;
+}
+
+export default function Home() {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, Answer>>({});
+  const [messages, setMessages] = useState<string[]>([]);
+  const [draft, setDraft] = useState("");
+  const [typing, setTyping] = useState(true);
+  const [consent, setConsent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const scrollArea = useRef<HTMLDivElement>(null);
+  const step = steps[stepIndex];
+  const selected = (answers[stepIndex] as string[] | undefined) ?? [];
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setTyping(false), 700);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    scrollArea.current?.scrollTo({ top: scrollArea.current.scrollHeight, behavior: "smooth" });
+  }, [messages, stepIndex, typing]);
+
+  function advance(value: string) {
+    if (!step) return;
+    const answer = step.multi ? selected.join(", ") : value.trim();
+    if (!answer) return;
+    setAnswers((current) => ({ ...current, [stepIndex]: step.multi ? selected : answer }));
+    setMessages((current) => [...current, answer]);
+    setDraft("");
+    setError("");
+    setTyping(true);
+    window.setTimeout(() => { setStepIndex((current) => current + 1); setTyping(false); }, 650);
+  }
+
+  function selectOption(option: string) {
+    if (!step) return;
+    if (!step.multi) return advance(option);
+    setAnswers((current) => {
+      const currentSelection = (current[stepIndex] as string[] | undefined) ?? [];
+      return { ...current, [stepIndex]: currentSelection.includes(option) ? currentSelection.filter((item) => item !== option) : [...currentSelection, option] };
+    });
+  }
+
+  function handleComposerSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (step?.field) advance(draft);
+  }
+
+  async function submitLead() {
+    if (!consent) return setError("Marque o consentimento para concluir.");
+    setSending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: answers[5], whatsapp: answers[6], cidade: answers[7], instagram: answers[8], horario: answers[9],
+          objetivo: answers[0], sintomas: answers[1], tempo: answers[2], tentativas: answers[3],
+          nivel_interesse: answers[4], consentimento: true,
+        }),
+      });
+      if (!response.ok) throw new Error("Falha ao enviar");
+      setSent(true);
+    } catch {
+      setError("Não consegui enviar agora. Tente novamente.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (sent) {
+    return <main className="app-shell"><div className="phone-frame"><ChatHeader typing={false} /><section className="chat-wallpaper success-screen"><MessageBubble><strong>Mensagem enviada 💚</strong><span>Recebi suas respostas e vou falar com você com carinho.</span></MessageBubble></section></div></main>;
+  }
+
+  return (
+    <main className="app-shell">
+      <div className="phone-frame">
+        <ChatHeader typing={typing} />
+        <section className="chat-wallpaper">
+          <div className="conversation" ref={scrollArea}>
+            <div className="day-pill">HOJE</div>
+            <PrivacyNotice />
+            <div className="message-list" aria-live="polite">
+              {messages.map((message, index) => (
+                <div className="exchange" key={`${message}-${index}`}>
+                  <MessageBubble>{steps[index].message}</MessageBubble>
+                  <MessageBubble mine>{message}</MessageBubble>
+                </div>
+              ))}
+              {typing && <div className="typing-bubble"><i /><i /><i /></div>}
+              {!typing && step && (
+                <div className="current-step">
+                  <MessageBubble>{step.message}</MessageBubble>
+                  {step.options && (
+                    <div className="option-grid">
+                      {step.options.map((option) => {
+                        const active = step.multi && selected.includes(option);
+                        return <button aria-pressed={active} className={`option-button ${active ? "option-selected" : ""}`} key={option} onClick={() => selectOption(option)} type="button">{active && <span className="option-check">✓</span>}{option}</button>;
+                      })}
+                      {step.multi && <button className="confirm-options" disabled={selected.length === 0} onClick={() => advance("")} type="button">Enviar respostas</button>}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!typing && !step && (
+                <div className="consent-card">
+                  <MessageBubble>Obrigada por me contar tudo isso. Posso usar suas respostas para organizar nosso primeiro contato?<small>Este formulário não substitui consulta, não realiza diagnóstico e não garante resultado.</small></MessageBubble>
+                  <label className="consent-label"><input checked={consent} onChange={(event) => setConsent(event.target.checked)} type="checkbox" /><span>Concordo que minhas respostas sejam usadas apenas para triagem inicial e organização do contato profissional.</span></label>
+                  {error && <p className="form-error">{error}</p>}
+                  <button className="confirm-options" disabled={sending} onClick={submitLead} type="button">{sending ? "Enviando..." : "Enviar mensagem"}</button>
+                </div>
+              )}
+            </div>
+          </div>
+          <form className="composer" onSubmit={handleComposerSubmit}>
+            <button aria-label="Emoji" className="composer-icon" type="button"><Icon size={23}><circle cx="12" cy="12" r="9" /><circle cx="9" cy="10" fill="currentColor" r=".8" stroke="none" /><circle cx="15" cy="10" fill="currentColor" r=".8" stroke="none" /><path d="M8.5 14.2c1.8 1.8 5.2 1.8 7 0" /></Icon></button>
+            <input aria-label="Sua resposta" disabled={!step?.field || typing} onChange={(event) => setDraft(event.target.value)} placeholder={step?.field ? "Digite uma mensagem" : "Toca numa opção acima"} value={draft} />
+            <button aria-label="Enviar" className="send-button" disabled={!step?.field || !draft.trim()} type="submit"><Icon size={23}><path d="m4 4 17 8-17 8 3-8Z" /><path d="M7 12h14" /></Icon></button>
+          </form>
+        </section>
+      </div>
+    </main>
+  );
+}
