@@ -55,6 +55,33 @@ const initialLead: Lead = {
 const draftKey = "luana_bio_draft_v2";
 const diagnosticBrazil = "R$ 350";
 const diagnosticAbroad = "60€";
+const sessionStorageKey = "luana_bio_session_v1";
+
+function trackFunnel(
+  sessionId: string,
+  eventName: "started" | "answered" | "step_viewed",
+  stepKey: string,
+  stepIndex: number,
+  answer?: unknown,
+) {
+  if (!sessionId) return;
+  void fetch("/api/funnel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    keepalive: true,
+    body: JSON.stringify({
+      session_id: sessionId,
+      event_name: eventName,
+      step_key: stepKey,
+      step_index: stepIndex,
+      answer: answer ?? null,
+      metadata: {
+        path: window.location.pathname,
+        referrer: document.referrer || null,
+      },
+    }),
+  }).catch(() => undefined);
+}
 
 const symptoms = [
   { id: "Inchaço abdominal constante", label: "Vivo inchada" },
@@ -382,6 +409,7 @@ export default function Home() {
   const feed = useRef<HTMLElement>(null);
   const messageId = useRef(0);
   const started = useRef(false);
+  const sessionId = useRef("");
 
   const updateLead = useCallback((patch: Partial<Lead>) => {
     const next = { ...leadRef.current, ...patch };
@@ -423,6 +451,14 @@ export default function Home() {
     if (started.current) return;
     started.current = true;
     try {
+      sessionId.current =
+        localStorage.getItem(sessionStorageKey) || crypto.randomUUID();
+      localStorage.setItem(sessionStorageKey, sessionId.current);
+    } catch {
+      sessionId.current = crypto.randomUUID();
+    }
+    trackFunnel(sessionId.current, "started", "inicio", 0);
+    try {
       const saved = JSON.parse(localStorage.getItem(draftKey) || "null");
       if (saved?.data && Date.now() - saved.timestamp < 604800000)
         updateLead(saved.data);
@@ -440,6 +476,7 @@ export default function Home() {
       );
       await addLu("Pra começar: como você se chama?", 700);
       setStage("nome");
+      trackFunnel(sessionId.current, "step_viewed", "nome", 1);
     })();
   }, [addLu, updateLead]);
 
@@ -464,6 +501,7 @@ export default function Home() {
         return setError("Me conta seu nome pra eu saber com quem falo.");
       updateLead({ nome: value });
       addMine(value);
+      trackFunnel(sessionId.current, "answered", "nome", 1, value);
       setDraft("");
       setStage("intro");
       await addLu(
@@ -474,11 +512,13 @@ export default function Home() {
         900,
       );
       setStage("sintomas");
+      trackFunnel(sessionId.current, "step_viewed", "sintomas", 2);
     } else if (stage === "whatsapp") {
       if (value.replace(/\D/g, "").length < 10)
         return setError("Preciso do DDD e do número completo.");
       updateLead({ whatsapp: value });
       addMine(value);
+      trackFunnel(sessionId.current, "answered", "whatsapp", 6, value);
       setDraft("");
       setStage("intro");
       await addLu(
@@ -486,6 +526,7 @@ export default function Home() {
         900,
       );
       setStage("instagram");
+      trackFunnel(sessionId.current, "step_viewed", "instagram", 7);
     } else if (stage === "instagram") {
       const instagram = normalizeInstagram(value);
       if (!/^@[A-Za-z0-9._]{2,}$/.test(instagram))
@@ -504,6 +545,7 @@ export default function Home() {
         )
         .join(", "),
     );
+    trackFunnel(sessionId.current, "answered", "sintomas", 2, values);
     setStage("intro");
     const unique = Array.from(
       new Map(
@@ -522,24 +564,28 @@ export default function Home() {
     }
     await addLu("Há quanto tempo é assim?", 700);
     setStage("tempo");
+    trackFunnel(sessionId.current, "step_viewed", "tempo", 3);
   }
 
   async function chooseDuration(value: string) {
     setPicker(null);
     updateLead({ tempo: value });
     addMine(value);
+    trackFunnel(sessionId.current, "answered", "tempo", 3, value);
     setStage("intro");
     await addLu(
       "E o que você já tentou até aqui? Marca o que mais se parece com o seu caso.",
       900,
     );
     setStage("tentou");
+    trackFunnel(sessionId.current, "step_viewed", "tentou", 4);
   }
 
   async function chooseAttempt(value: string) {
     setPicker(null);
     updateLead({ tentou: value });
     addMine(value);
+    trackFunnel(sessionId.current, "answered", "tentou", 4, value);
     setStage("intro");
     await addLu(attemptReplies[value] || "Faz sentido.", 1300);
     await addLu(
@@ -568,30 +614,36 @@ export default function Home() {
     );
     await addLu("Você mora no Brasil?", 700);
     setStage("fora");
+    trackFunnel(sessionId.current, "step_viewed", "fora", 5);
   }
 
   async function chooseCountry(outside: boolean) {
     const answer = outside ? "Moro fora do Brasil" : "Sim, moro no Brasil";
     updateLead({ fora: outside });
     addMine(answer);
+    trackFunnel(sessionId.current, "answered", "fora", 5, answer);
     setStage("intro");
     await addLu("Me passa seu WhatsApp? É por onde eu te respondo.", 800);
     setStage("whatsapp");
+    trackFunnel(sessionId.current, "step_viewed", "whatsapp", 6);
   }
 
   async function chooseInstagram(value: string) {
     const instagram = value === "Não uso Instagram" ? "" : value;
     updateLead({ instagram });
     addMine(value);
+    trackFunnel(sessionId.current, "answered", "instagram", 7, value);
     setDraft("");
     setStage("intro");
     await addLu("Por onde você me achou?", 700);
     setStage("origem");
+    trackFunnel(sessionId.current, "step_viewed", "origem", 8);
   }
 
   async function chooseOrigin(id: string, label: string) {
     updateLead({ origem: id });
     addMine(label);
+    trackFunnel(sessionId.current, "answered", "origem", 8, label);
     setStage("intro");
     const outside = !!leadRef.current.fora;
     const diagnostic = outside ? diagnosticAbroad : diagnosticBrazil;
@@ -643,6 +695,7 @@ export default function Home() {
     );
     await addLu("O que você prefere?", 600);
     setStage("decisao");
+    trackFunnel(sessionId.current, "step_viewed", "decisao", 9);
   }
 
   async function chooseDecision(kind: "diag" | "direto" | "nao") {
@@ -656,6 +709,7 @@ export default function Home() {
           : "Ainda não";
     updateLead({ decisao: decision });
     addMine(decision);
+    trackFunnel(sessionId.current, "answered", "decisao", 9, decision);
     setSaving(true);
     setStage("intro");
     setError("");
@@ -664,6 +718,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          session_id: sessionId.current,
           ...leadRef.current,
           decisao: decision,
           consentimento: true,
@@ -690,6 +745,7 @@ export default function Home() {
         );
       try {
         localStorage.removeItem(draftKey);
+        localStorage.removeItem(sessionStorageKey);
       } catch {}
       const name = firstName(leadRef.current.nome);
       await addLu(
