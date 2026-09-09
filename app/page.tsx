@@ -56,6 +56,14 @@ const draftKey = "luana_bio_draft_v2";
 const diagnosticBrazil = "R$ 350";
 const diagnosticAbroad = "60€";
 const sessionStorageKey = "luana_bio_session_v1";
+const stages: Stage[] = ["nome", "sintomas", "tempo", "tentou", "fora", "whatsapp", "instagram", "origem", "decisao"];
+const questions: Record<string, string> = {
+  nome: "Como você se chama?", sintomas: "O que você está sentindo?",
+  tempo: "Há quanto tempo é assim?", tentou: "O que você já tentou até aqui?",
+  fora: "Você mora no Brasil?", whatsapp: "Qual é o seu WhatsApp, com código do país e DDD?",
+  instagram: "Qual é o seu Instagram?", origem: "Por onde você me achou?",
+  decisao: "O que você prefere?",
+};
 
 function trackFunnel(
   sessionId: string,
@@ -78,6 +86,7 @@ function trackFunnel(
       metadata: {
         path: window.location.pathname,
         referrer: document.referrer || null,
+        utm: Object.fromEntries(Array.from(new URLSearchParams(window.location.search).entries()).filter(([key]) => ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].includes(key))),
       },
     }),
   }).catch(() => undefined);
@@ -410,15 +419,20 @@ export default function Home() {
   const messageId = useRef(0);
   const started = useRef(false);
   const sessionId = useRef("");
+  const nextStage = useRef<Stage>("nome");
 
   const updateLead = useCallback((patch: Partial<Lead>) => {
     const next = { ...leadRef.current, ...patch };
     leadRef.current = next;
     setLead(next);
+    const field = Object.keys(patch)[0];
+    const index = stages.indexOf(field as Stage);
+    if (Object.keys(patch).length === 1 && index >= 0)
+      nextStage.current = stages[Math.min(index + 1, stages.length - 1)];
     try {
       localStorage.setItem(
         draftKey,
-        JSON.stringify({ timestamp: Date.now(), data: next }),
+        JSON.stringify({ timestamp: Date.now(), data: next, nextStage: nextStage.current }),
       );
     } catch {}
   }, []);
@@ -457,12 +471,25 @@ export default function Home() {
     } catch {
       sessionId.current = crypto.randomUUID();
     }
-    trackFunnel(sessionId.current, "started", "inicio", 0);
     try {
       const saved = JSON.parse(localStorage.getItem(draftKey) || "null");
-      if (saved?.data && Date.now() - saved.timestamp < 604800000)
+      if (saved?.data && Date.now() - saved.timestamp < 604800000 && stages.includes(saved.nextStage)) {
+        nextStage.current = saved.nextStage;
         updateLead(saved.data);
+        const resume = saved.nextStage as Stage;
+        setMessages([
+          { id: ++messageId.current, from: "lu", content: "Vamos continuar de onde você parou. Suas respostas anteriores foram recuperadas neste navegador." },
+          ...Object.entries(saved.data).filter(([, value]) => value !== "" && value !== null && (!Array.isArray(value) || value.length)).map(([key, value]) => ({ id: ++messageId.current, from: "voce" as const, content: `${questions[key] || key}: ${Array.isArray(value) ? value.join(", ") : typeof value === "boolean" ? (value ? "Fora do Brasil" : "Brasil") : String(value)}` })),
+          { id: ++messageId.current, from: "lu", content: resume === "decisao" ? `Diagnóstico: ${saved.data.fora ? diagnosticAbroad : diagnosticBrazil}, abatido do acompanhamento. Acompanhamento de 90 dias: ${saved.data.fora ? "300€" : "R$ 1.497 no Pix ou 12x de R$ 150"}. O que você prefere?` : questions[resume] },
+        ]);
+        setStage(resume);
+        trackFunnel(sessionId.current, "step_viewed", resume, stages.indexOf(resume) + 1);
+        return;
+      }
     } catch {}
+    sessionId.current = crypto.randomUUID();
+    try { localStorage.setItem(sessionStorageKey, sessionId.current); } catch {}
+    trackFunnel(sessionId.current, "started", "inicio", 0);
     (async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 500));
       await addLu("Oi. Eu sou a Lu, nutricionista do seu intestino.", 700);
@@ -818,11 +845,11 @@ export default function Home() {
             <Icon name="menu" />
           </span>
         </header>
+        {stage !== "intro" && stage !== "fim" && <div style={{ padding: "8px 16px", fontSize: 14, background: "#fff" }}>Pergunta {stages.indexOf(stage) + 1} de {stages.length} · Progresso guardado neste navegador</div>}
         <section aria-live="polite" className="fio" ref={feed}>
           <span className="dia">Hoje</span>
           <span className="aviso">
-            <Icon name="lock" /> Suas respostas são confidenciais e só a Luana
-            lê. Luana Turque Nutrição · CRN-4 19100494.
+            <Icon name="lock" /> Suas respostas são registradas ao longo da conversa para preparar seu atendimento e entender o preenchimento. Apenas a equipe autorizada tem acesso. O progresso fica neste navegador por até 7 dias.
           </span>
           {messages.map((message) => (
             <div

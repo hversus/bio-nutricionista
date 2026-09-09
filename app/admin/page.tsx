@@ -4,6 +4,7 @@ import { createClient, Session } from "@supabase/supabase-js";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabasePublishableKey, supabaseUrl } from "../../lib/supabase-config";
 import styles from "./admin.module.css";
+import Contacts from "./contacts";
 
 type EventRow = {
   id: number;
@@ -38,6 +39,7 @@ type LeadRow = {
 };
 
 const adminEmail = "matheusgaleno11@gmail.com";
+const isAdmin = (email?: string) => [adminEmail, "nazyvitoria@gmail.com"].includes(email?.toLowerCase() || "");
 const supabase = createClient(supabaseUrl, supabasePublishableKey);
 const stepLabels: Record<string, string> = {
   inicio: "Iniciou",
@@ -189,7 +191,28 @@ export default function AdminPage() {
       eventsQuery,
       leadsQuery,
     ]);
-    if (eventsResult.error || leadsResult.error) {
+    let pageFailed = false;
+    // Supabase caps each response; fetch subsequent pages rather than silently
+    // reporting only the first page as the entire funnel.
+    if (!eventsResult.error && eventsResult.data?.length) {
+      let count = eventsResult.data.length;
+      while (count > 0) {
+        const page = await eventsQuery.range(eventsResult.data.length, eventsResult.data.length + 999);
+        if (page.error) { pageFailed = true; break; }
+        count = page.data?.length || 0;
+        eventsResult.data.push(...(page.data || []));
+      }
+    }
+    if (!leadsResult.error && leadsResult.data?.length) {
+      let count = leadsResult.data.length;
+      while (count > 0) {
+        const page = await leadsQuery.range(leadsResult.data.length, leadsResult.data.length + 999);
+        if (page.error) { pageFailed = true; break; }
+        count = page.data?.length || 0;
+        leadsResult.data.push(...(page.data || []));
+      }
+    }
+    if (pageFailed || eventsResult.error || leadsResult.error) {
       setError(
         "Não foi possível carregar os dados. Confirme se este e-mail tem acesso.",
       );
@@ -201,7 +224,7 @@ export default function AdminPage() {
   }, [days, session]);
 
   useEffect(() => {
-    if (session?.user.email === adminEmail) void loadData();
+    if (isAdmin(session?.user.email)) void loadData();
     else setLoading(false);
   }, [loadData, session]);
 
@@ -210,6 +233,7 @@ export default function AdminPage() {
       string,
       {
         startedAt: number;
+        lastAt?: number;
         completedAt?: number;
         maxIndex: number;
         lastStep: string;
@@ -226,6 +250,7 @@ export default function AdminPage() {
         lastStep: "inicio",
       };
       current.startedAt = Math.min(current.startedAt, timestamp);
+      current.lastAt = Math.max(current.lastAt || 0, timestamp);
       if (event.step_index >= current.maxIndex) {
         current.maxIndex = event.step_index;
         current.lastStep = event.step_key;
@@ -279,7 +304,7 @@ export default function AdminPage() {
 
     const started = reached.get("inicio")?.size ?? 0;
     const completed = reached.get("completed")?.size ?? 0;
-    const abandoned = Math.max(0, started - completed);
+    const abandoned = Array.from(sessions.values()).filter(item => !item.completedAt && Date.now() - (item.lastAt || item.startedAt) >= 1800000).length;
     const completedDurations = Array.from(sessions.values())
       .filter((item) => item.completedAt)
       .map((item) => (item.completedAt! - item.startedAt) / 60000)
@@ -301,7 +326,7 @@ export default function AdminPage() {
 
     const dropoffs = new Map<string, number>();
     for (const item of Array.from(sessions.values())) {
-      if (!item.completedAt)
+      if (!item.completedAt && Date.now() - (item.lastAt || item.startedAt) >= 1800000)
         dropoffs.set(item.lastStep, (dropoffs.get(item.lastStep) ?? 0) + 1);
     }
 
@@ -388,7 +413,7 @@ export default function AdminPage() {
   if (!authReady)
     return <main className={styles.statePage}>Carregando acesso...</main>;
   if (!session) return <Login />;
-  if (session.user.email !== adminEmail)
+  if (!isAdmin(session.user.email))
     return (
       <main className={styles.statePage}>
         <section className={styles.denied}>
@@ -466,11 +491,10 @@ export default function AdminPage() {
                 <small>{analysis.completionRate}% de conversão</small>
               </article>
               <article>
-                <span>Abandonos</span>
+                <span>Possíveis abandonos</span>
                 <strong>{analysis.abandoned}</strong>
                 <small>
-                  {percent(analysis.abandoned, analysis.started)}% não
-                  concluíram
+                  Sem resposta há 30 minutos ou mais
                 </small>
               </article>
               <article>
@@ -563,6 +587,7 @@ export default function AdminPage() {
               </div>
             </section>
 
+            <Contacts events={events} leads={leads} client={supabase} />
             <section className={styles.panel} id="formularios">
               <div className={styles.tableHeader}>
                 <div>
