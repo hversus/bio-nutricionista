@@ -53,14 +53,12 @@ const initialLead: Lead = {
   decisao: "",
 };
 const draftKey = "vitoria_bio_draft_v1";
-const diagnosticBrazil = "R$ 350";
-const diagnosticAbroad = "60€";
 const sessionStorageKey = "vitoria_bio_session_v1";
-const contactWhatsapp = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP?.replace(/\D/g, "") || "";
+const contactWhatsapp = "559991431867";
 const stages: Stage[] = ["nome", "sintomas", "tempo", "tentou", "fora", "whatsapp", "instagram", "origem", "decisao"];
 const questions: Record<string, string> = {
   nome: "Como você se chama?", sintomas: "O que você está sentindo?",
-  tempo: "Há quanto tempo é assim?", tentou: "O que você já tentou até aqui?",
+  tempo: "Há quanto tempo você sente isso?", tentou: "O que você já tentou até aqui?",
   fora: "Você mora no Brasil?", whatsapp: "Qual é o seu WhatsApp, com código do país e DDD?",
   instagram: "Qual é o seu Instagram?", origem: "Por onde você me achou?",
   decisao: "O que você prefere?",
@@ -100,6 +98,10 @@ const symptoms = [
   { id: "Sono ou cansaço depois das refeições", label: "Sono ou cansaço depois das refeições" },
   { id: "Falta de energia ao longo do dia", label: "Falta de energia ao longo do dia" },
   { id: "Acúmulo de gordura abdominal", label: "Acúmulo de gordura abdominal" },
+  { id: "Formigamento nas mãos e pés", label: "Formigamento nas mãos e pés" },
+  { id: "Feridas que demoram a cicatrizar", label: "Feridas que demoram a cicatrizar" },
+  { id: "Sede excessiva", label: "Sede excessiva" },
+  { id: "Já tenho diagnóstico", label: "Já tenho diagnóstico" },
 ];
 
 const durations = [
@@ -384,8 +386,8 @@ export default function Home() {
         const resume = saved.nextStage as Stage;
         setMessages([
           { id: ++messageId.current, from: "lu", content: "Vamos continuar de onde você parou. Suas respostas anteriores foram recuperadas neste navegador." },
-          ...Object.entries(saved.data).filter(([, value]) => value !== "" && value !== null && (!Array.isArray(value) || value.length)).map(([key, value]) => ({ id: ++messageId.current, from: "voce" as const, content: `${questions[key] || key}: ${Array.isArray(value) ? value.join(", ") : typeof value === "boolean" ? (value ? "Fora do Brasil" : "Brasil") : String(value)}` })),
-          { id: ++messageId.current, from: "lu", content: resume === "decisao" ? `Diagnóstico: ${saved.data.fora ? diagnosticAbroad : diagnosticBrazil}, abatido do acompanhamento. Acompanhamento de 90 dias: ${saved.data.fora ? "300€" : "R$ 1.497 no Pix ou 12x de R$ 150"}. O que você prefere?` : questions[resume] },
+          ...Object.entries(saved.data).filter(([key, value]) => key !== "decisao" && value !== "" && value !== null && (!Array.isArray(value) || value.length)).map(([key, value]) => ({ id: ++messageId.current, from: "voce" as const, content: `${questions[key] || key}: ${Array.isArray(value) ? value.join(", ") : typeof value === "boolean" ? (value ? "Fora do Brasil" : "Brasil") : String(value)}` })),
+          { id: ++messageId.current, from: "lu", content: resume === "decisao" ? `Acompanhamento de 90 dias: ${saved.data.fora ? "300€" : "R$ 1.497 no Pix ou 12x de R$ 150"}. Quer começar seu acompanhamento?` : questions[resume] },
         ]);
         setStage(resume);
         trackFunnel(sessionId.current, "step_viewed", resume, stages.indexOf(resume) + 1);
@@ -479,7 +481,16 @@ export default function Home() {
     );
     trackFunnel(sessionId.current, "answered", "sintomas", 2, values);
     setStage("intro");
-    await addLu("Há quanto tempo é assim?", 700);
+    if (values.includes("Já tenho diagnóstico")) {
+      await addLu("Você marcou que já tem um diagnóstico. Quero conhecer essa história e entender como está o seu acompanhamento hoje.", 900);
+    } else if (values.some(value => ["Formigamento nas mãos e pés", "Feridas que demoram a cicatrizar", "Sede excessiva"].includes(value))) {
+      await addLu("Obrigada por me contar o que você está sentindo. Quero entender quando esses sinais começaram e como eles aparecem no seu dia a dia.", 900);
+    } else if (values.some(value => ["Fome frequente", "Vontade/compulsão por doces"].includes(value))) {
+      await addLu("Você contou sobre sua fome e sua relação com os doces. Quero te ouvir sem julgamentos e entender como isso acontece na sua rotina.", 900);
+    } else {
+      await addLu("Obrigada por compartilhar isso comigo. Quero entender seus incômodos, sua rotina e o que você gostaria de melhorar com o acompanhamento.", 900);
+    }
+    await addLu("Há quanto tempo você sente isso?", 700);
     setStage("tempo");
     trackFunnel(sessionId.current, "step_viewed", "tempo", 3);
   }
@@ -561,18 +572,14 @@ export default function Home() {
     trackFunnel(sessionId.current, "answered", "origem", 8, label);
     setStage("intro");
     const outside = !!leadRef.current.fora;
-    const diagnostic = outside ? diagnosticAbroad : diagnosticBrazil;
     await addLu(
       <>
-        Última coisa, {firstName(leadRef.current.nome)}. Você não precisa
-        decidir os 90 dias agora. Dá pra começar pelo{" "}
-        <b>diagnóstico completo</b>, por <b>{diagnostic}</b>, abatidos depois se
-        você seguir comigo.
+        {firstName(leadRef.current.nome)}, agora que te conheço um pouco melhor,
+        quero te apresentar o meu <b>acompanhamento nutricional de 90 dias</b>.
         <p className="mt">
-          Uma consulta comigo, por vídeo, só pra investigar o seu caso:
-          histórico, sintomas, o que você já tentou e os exames que você já tem.
-          Você sai sabendo o que costuma estar por trás do que sente e qual
-          caminho eu seguiria com você.
+          Vamos conversar sobre seu histórico, seus sintomas, o que você já tentou
+          e os exames que você já tem, para construir um plano individualizado
+          e acompanhar sua evolução.
         </p>
       </>,
       1300,
@@ -581,10 +588,6 @@ export default function Home() {
       <>
         Pra ficar claro:
         <div className="caixa">
-          <div className="l">
-            <span>Diagnóstico completo</span>
-            <b>{diagnostic}</b>
-          </div>
           <div className="l">
             <span>
               Acompanhamento de 90 dias{outside ? " (fora do Brasil)" : ""}
@@ -597,30 +600,19 @@ export default function Home() {
               <b>12x de R$ 150</b>
             </div>
           )}
-          <div className="l">
-            <span>Fez o diagnóstico e seguiu?</span>
-            <b>{diagnostic} abatidos</b>
-          </div>
         </div>
-        <p className="nota">
-          Se você não seguir, fica só o diagnóstico, sem compromisso.
-        </p>
       </>,
       1100,
     );
-    await addLu("O que você prefere?", 600);
+    await addLu("Quer começar seu acompanhamento?", 600);
     setStage("decisao");
     trackFunnel(sessionId.current, "step_viewed", "decisao", 9);
   }
 
-  async function chooseDecision(kind: "diag" | "direto" | "nao") {
-    const outside = !!leadRef.current.fora;
-    const diagnostic = outside ? diagnosticAbroad : diagnosticBrazil;
+  async function chooseDecision(kind: "direto" | "nao") {
     const decision =
-      kind === "diag"
-        ? `Quero fazer o diagnóstico (${diagnostic})`
-        : kind === "direto"
-          ? "Quero ir direto pro acompanhamento"
+      kind === "direto"
+          ? "Quero começar meu acompanhamento"
           : "Ainda não";
     updateLead({ decisao: decision });
     addMine(decision);
@@ -664,13 +656,7 @@ export default function Home() {
       } catch {}
       const name = firstName(leadRef.current.nome);
       await addLu(
-        kind === "diag" ? (
-          <>
-            Obrigada por me contar tudo isso, {name}. Eu mesma vou te chamar no
-            WhatsApp pra combinar o dia do seu diagnóstico. Se quiser adiantar,
-            me chama por aqui que a mensagem já vai pronta.
-          </>
-        ) : kind === "direto" ? (
+        kind === "direto" ? (
           <>
             Obrigada por me contar tudo isso, {name}. Eu mesma vou te chamar no
             WhatsApp pra gente combinar o começo dos seus 90 dias. Se quiser
@@ -860,19 +846,10 @@ export default function Home() {
               <button
                 className="bot"
                 disabled={saving}
-                onClick={() => chooseDecision("diag")}
-                type="button"
-              >
-                Quero fazer o diagnóstico (
-                {lead.fora ? diagnosticAbroad : diagnosticBrazil})
-              </button>
-              <button
-                className="bot"
-                disabled={saving}
                 onClick={() => chooseDecision("direto")}
                 type="button"
               >
-                Quero ir direto pro acompanhamento
+                Quero começar meu acompanhamento
               </button>
               <button
                 className="bot"

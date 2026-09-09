@@ -53,7 +53,7 @@ export function firstContact(replies: Record<string, unknown>, complete: boolean
   if (/ainda não|não quero|nao quero/i.test(decision)) paragraphs.push("Vi que você prefere não começar agora, e tudo bem. Se quiser conversar, qual é a principal dúvida que ficou? Sem compromisso.");
   else if (!complete) paragraphs.push("Recebi parte das suas respostas. Ficou alguma dúvida ou algo que dificultou continuar? Se preferir, podemos conversar por aqui, no seu tempo.");
   else if (/direto|acompanhamento/i.test(decision) && !/diagnóstico|diagnostico/i.test(decision)) paragraphs.push("Vi que você tem interesse no acompanhamento. Posso te explicar os próximos passos e entender o que você espera desse processo?");
-  else if (/diagnóstico|diagnostico/i.test(decision)) paragraphs.push("Vi que você quer começar pela consulta de diagnóstico. Quer que eu te passe as opções de horário para conversarmos sobre o seu caso?");
+  else if (/diagnóstico|diagnostico/i.test(decision)) paragraphs.push("Posso te explicar como funciona o acompanhamento nutricional e entender o que você espera desse processo?");
   else paragraphs.push("O que você mais gostaria de melhorar neste momento? Quero entender suas prioridades antes de explicar os próximos passos.");
   if (/fora/i.test(displayAnswer(replies.fora))) paragraphs.push("Como você mora fora do Brasil, me conta também o seu fuso horário para combinarmos um horário confortável para você.");
   return paragraphs.join("\n\n");
