@@ -35,7 +35,7 @@ export function symptomReply(context: Context): string {
     return `${opening} Quero entender como esses sinais aparecem no seu dia a dia e se você já buscou uma avaliação para eles.`;
   }
   if (selected.has("Fome frequente") || selected.has("Vontade/compulsão por doces")) {
-    return `${opening} Quero entender seus horários, suas refeições e os momentos em que isso acontece, sem julgamentos sobre o que você come.`;
+    return `${opening} No meu acompanhamento, busco entender seus horários, suas refeições e os momentos em que isso acontece, sem julgamentos sobre o que você come.`;
   }
   if (selected.has("Sono ou cansaço depois das refeições") || selected.has("Falta de energia ao longo do dia")) {
     return `${opening} Quero conhecer sua alimentação e seu descanso, e entender em quais momentos você sente mais essa mudança na disposição.`;
@@ -56,7 +56,7 @@ export function durationReply(context: Context): string {
 }
 
 const attemptReplies: Record<string, string> = {
-  "Cortou açúcar e carboidratos": "Você já tentou cortar açúcar e carboidratos. Quero entender como se sentiu com essas mudanças e o que foi possível manter na sua rotina.",
+  "Cortou açúcar e carboidratos": "Se você já tentou cortar açúcar e carboidratos. Vou precisar saber como se sentiu com essas mudanças e o que foi possível manter na sua rotina.",
   "Protocolo da internet": "Você tentou seguir um protocolo da internet. Quero ouvir como foi colocar isso em prática e quais partes combinaram, ou não, com a sua rotina.",
   "Passou por médico ou nutri": "Você já buscou ajuda profissional. Quero conhecer as orientações que recebeu, o que funcionou para você e o que ainda precisa de atenção.",
   "Chás e shots matinais": "Você já tentou incluir chás e shots matinais na rotina. Quero entender o que esperava dessas mudanças, como se sentiu e o que percebeu depois de começar.",

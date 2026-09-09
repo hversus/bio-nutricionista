@@ -658,8 +658,8 @@ export default function Home() {
           </>
         ) : (
           <>
-            Tudo bem, {name}. Guardei o que você escreveu, e quando fizer
-            sentido eu estou aqui.
+            Tudo bem, {name}. Guardei o que você escreveu, e quando você estiver
+            pronta eu estou aqui.
           </>
         ),
         1200,
