@@ -598,3 +598,43 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {filteredLeads.map((lead) => (
+                      <tr key={lead.id}>
+                        <td>{formatDate(lead.criado_em)}</td>
+                        <td>
+                          <strong>{lead.nome}</strong>
+                          <span>{lead.whatsapp}</span>
+                          {lead.instagram && <span>{lead.instagram}</span>}
+                        </td>
+                        <td>{lead.cidade}</td>
+                        <td>
+                          <span className={styles.status}>
+                            {lead.nivel_interesse}
+                          </span>
+                        </td>
+                        <td>
+                          <span>
+                            {(lead.respostas.sintomas ?? [])
+                              .slice(0, 3)
+                              .join(", ") || "—"}
+                          </span>
+                          <small>
+                            {lead.respostas.tempo || "Tempo não informado"}
+                          </small>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!filteredLeads.length && (
+                  <p className={styles.empty}>
+                    Nenhum formulário completo neste período.
+                  </p>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+      </section>
+    </main>
+  );
+}
