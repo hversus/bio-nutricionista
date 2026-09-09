@@ -5,6 +5,9 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabasePublishableKey, supabaseUrl } from "../../lib/supabase-config";
 import styles from "./admin.module.css";
 import Contacts from "./contacts";
+import Patients from './patients';
+import DeleteForm from './delete-form';
+import type { PatientSeed } from '../../lib/patients';
 
 type EventRow = {
   id: number;
@@ -150,6 +153,16 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [tab,setTab]=useState<'analytics'|'patients'>('analytics');
+  const [patientSeed,setPatientSeed]=useState<PatientSeed|null>(null);
+  const [deleting,setDeleting]=useState<{id:string;name:string}|null>(null);
+  const clearPatientSeed=useCallback(()=>setPatientSeed(null),[]);
+  function startPatient(seed:PatientSeed){setPatientSeed(seed);setTab('patients');window.location.hash='pacientes';window.scrollTo({top:0});}
+  useEffect(()=>{
+    const syncTab=()=>setTab(window.location.hash==='#pacientes'?'patients':'analytics');
+    syncTab();window.addEventListener('hashchange',syncTab);
+    return()=>window.removeEventListener('hashchange',syncTab);
+  },[]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -432,15 +445,16 @@ export default function AdminPage() {
         <div className={styles.logo}>VS</div>
         <div>
           <strong>Vitória Serafim</strong>
-          <span>Análise do formulário</span>
+          <span>Relacionamento e acompanhamento</span>
         </div>
         <nav>
-          <a className={styles.active} href="#visao-geral">
+          <a className={tab==='analytics'?styles.active:''} onClick={()=>setTab('analytics')} href="#visao-geral">
             Visão geral
           </a>
-          <a href="#funil">Funil</a>
-          <a href="#respostas">Respostas</a>
-          <a href="#formularios">Formulários</a>
+          <a href="#funil" onClick={()=>setTab('analytics')}>Funil</a>
+          <a href="#respostas" onClick={()=>setTab('analytics')}>Respostas</a>
+          <a href="#formularios" onClick={()=>setTab('analytics')}>Formulários</a>
+          <a href="#pacientes" className={tab==='patients'?styles.active:''} onClick={()=>{setTab('patients');window.scrollTo({top:0});}}>Pacientes</a>
         </nav>
         <button
           className={styles.signOut}
@@ -452,6 +466,7 @@ export default function AdminPage() {
       </aside>
 
       <section className={styles.content}>
+        {tab==='patients'?<Patients client={supabase} seed={patientSeed} onSeedHandled={clearPatientSeed}/>:<>
         <header className={styles.topbar}>
           <div>
             <p className={styles.eyebrow}>Painel de conversão</p>
@@ -587,7 +602,7 @@ export default function AdminPage() {
               </div>
             </section>
 
-            <Contacts events={events} leads={leads} client={supabase} />
+            <Contacts events={events} leads={leads} client={supabase} onDeleted={()=>void loadData()} onPatient={startPatient} />
             <section className={styles.panel} id="formularios">
               <div className={styles.tableHeader}>
                 <div>
@@ -619,6 +634,7 @@ export default function AdminPage() {
                       <th>Local</th>
                       <th>Interesse</th>
                       <th>Principais respostas</th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -646,6 +662,7 @@ export default function AdminPage() {
                             {lead.respostas.tempo || "Tempo não informado"}
                           </small>
                         </td>
+                        <td><button onClick={()=>startPatient({sessionId:lead.session_id,name:lead.nome,phone:lead.whatsapp})}>Iniciar acompanhamento</button>{' '}<button onClick={()=>setDeleting({id:lead.session_id,name:lead.nome})}>Excluir</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -659,6 +676,8 @@ export default function AdminPage() {
             </section>
           </>
         )}
+        </>}
+        {deleting&&<DeleteForm client={supabase} sessionId={deleting.id} name={deleting.name} onClose={()=>setDeleting(null)} onDeleted={()=>{setDeleting(null);void loadData();}}/>}
       </section>
     </main>
   );

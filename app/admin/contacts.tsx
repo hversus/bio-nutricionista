@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import styles from "./admin.module.css";
 import ContactDialog, { MessageDraft } from "./contact-dialog";
+import DeleteForm from './delete-form';
+import type { PatientSeed } from '../../lib/patients';
 
 type Event = { session_id: string; event_name: string; step_key: string; answer: unknown; created_at: string };
 type Lead = { session_id: string; nome: string; whatsapp: string; criado_em: string };
@@ -11,7 +13,8 @@ const labels: Record<string, string> = { inicio: "Início", nome: "Nome", sintom
 const statuses = ["Novo", "Contatado", "Consulta agendada", "Não avançou"];
 function answer(value: unknown) { return Array.isArray(value) ? value.join(", ") : value == null ? "—" : String(value); }
 
-export default function Contacts({ events, leads, client }: { events: Event[]; leads: Lead[]; client: SupabaseClient }) {
+export default function Contacts({ events, leads, client, onDeleted, onPatient }: { events: Event[]; leads: Lead[]; client: SupabaseClient; onDeleted: () => void; onPatient: (seed: PatientSeed) => void }) {
+  const [deleting, setDeleting] = useState<{id:string;name:string}|null>(null);
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Todos");
@@ -76,13 +79,15 @@ export default function Contacts({ events, leads, client }: { events: Event[]; l
     </div>
     {message && !current && <p role="status">{message}</p>}
     <div className={styles.tableWrap}><table><thead><tr><th>Contato</th><th>Formulário</th><th>Última etapa</th><th>Atendimento</th><th>Histórico</th></tr></thead><tbody>
-      {contacts.filter(c => `${c.name} ${c.phone}`.toLowerCase().includes(query.toLowerCase()) && (filter === "Todos" || c.state === filter || (c.record?.status || "Novo") === filter)).map(c => <tr key={c.id}><td>{c.name === "—" ? "Nome não informado" : c.name}<span>{c.phone}</span></td><td>{c.state}</td><td>{labels[c.step] || c.step}<span>{new Date(c.lastAt).toLocaleString("pt-BR")}</span></td><td>{c.record?.status || "Novo"}</td><td><button disabled={saving} onClick={() => {setSelected(c.id); setStatus(c.record?.status || "Novo"); setNotes(c.record?.notes || ""); setMessage("");}}>Abrir</button></td></tr>)}
+      {contacts.filter(c => `${c.name} ${c.phone}`.toLowerCase().includes(query.toLowerCase()) && (filter === "Todos" || c.state === filter || (c.record?.status || "Novo") === filter)).map(c => <tr key={c.id}><td>{c.name === "—" ? "Nome não informado" : c.name}<span>{c.phone}</span></td><td>{c.state}</td><td>{labels[c.step] || c.step}<span>{new Date(c.lastAt).toLocaleString("pt-BR")}</span></td><td>{c.record?.status || "Novo"}</td><td><button disabled={saving} onClick={() => {setSelected(c.id); setStatus(c.record?.status || "Novo"); setNotes(c.record?.notes || ""); setMessage("");}}>Abrir</button>{' '}<button disabled={saving} onClick={()=>setDeleting({id:c.id,name:c.name})}>Excluir</button></td></tr>)}
     </tbody></table></div>
     {!contacts.length && <p>Nenhum contato neste período.</p>}
+    {deleting&&<DeleteForm client={client} sessionId={deleting.id} name={deleting.name} onClose={()=>setDeleting(null)} onDeleted={()=>{delete messageDrafts.current[deleting.id];setRecords(rows=>rows.filter(r=>r.session_id!==deleting.id));setDeleting(null);setSelected('');onDeleted();}}/>}
     {current && <ContactDialog key={current.id} id={current.id} name={current.name} client={client} onClose={closeContact} saving={saving} savedDraft={messageDrafts.current[current.id]} onDraftChange={draft => { messageDrafts.current[current.id] = draft; }}>
       <label>Etapa do atendimento <select value={status} onChange={e => setStatus(e.target.value)}>{statuses.map(s => <option key={s}>{s}</option>)}</select></label>
       <label style={{ display: "block", marginTop: 16 }}>Observações<textarea style={{ display: "block", width: "100%", minHeight: 100 }} maxLength={5000} value={notes} onChange={e => setNotes(e.target.value)} /></label>
       <button disabled={saving} onClick={save}>{saving ? "Salvando..." : "Salvar acompanhamento"}</button>{" "}
+      <button disabled={saving} onClick={()=>{const changed=notes!==(current.record?.notes||'')||status!==(current.record?.status||'Novo');if(changed&&!window.confirm('Iniciar acompanhamento sem salvar as alterações deste contato?'))return;onPatient({sessionId:current.id,name:current.name,phone:current.phone});}}>Iniciar acompanhamento do paciente</button>
       {message && <p role="status">{message}</p>}
     </ContactDialog>}
   </section>;
