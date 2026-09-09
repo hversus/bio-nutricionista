@@ -56,6 +56,10 @@ export function durationReply(context: Context): string {
 }
 
 const attemptReplies: Record<string, string> = {
+  "Cortou açúcar e carboidratos": "Você já tentou cortar açúcar e carboidratos. Quero entender como se sentiu com essas mudanças e o que foi possível manter na sua rotina.",
+  "Protocolo da internet": "Você tentou seguir um protocolo da internet. Quero ouvir como foi colocar isso em prática e quais partes combinaram, ou não, com a sua rotina.",
+  "Passou por médico ou nutri": "Você já buscou ajuda profissional. Quero conhecer as orientações que recebeu, o que funcionou para você e o que ainda precisa de atenção.",
+  "Chás e shots matinais": "Você já tentou incluir chás e shots matinais na rotina. Quero entender o que esperava dessas mudanças, como se sentiu e o que percebeu depois de começar.",
   "Cortei glúten, lactose ou açúcar por conta": "Você já tentou tirar alimentos por conta própria. Quero entender como se sentiu com essas mudanças e o que foi possível manter na sua rotina.",
   "Probiótico ou laxante da farmácia": "Você buscou uma alternativa na farmácia. Quero saber o que motivou esse uso e como você se sentiu depois, para conhecer melhor o que já tentou.",
   "Protocolo que vi na internet": "Você tentou seguir um protocolo da internet. Quero ouvir como foi colocar isso em prática e quais partes combinaram, ou não, com a sua rotina.",

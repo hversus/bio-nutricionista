@@ -113,11 +113,11 @@ const durations = [
   "Há tanto tempo que já considerei normal",
 ];
 const attempts = [
-  "Cortei glúten, lactose ou açúcar por conta",
-  "Probiótico ou laxante da farmácia",
-  "Protocolo que vi na internet",
-  "Já passei por médico ou nutri",
+  "Cortou açúcar e carboidratos",
+  "Protocolo da internet",
+  "Passou por médico ou nutri",
   "Remédio pra emagrecer",
+  "Chás e shots matinais",
   "Ainda nada",
 ];
 
