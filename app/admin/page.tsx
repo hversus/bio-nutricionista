@@ -78,7 +78,8 @@ function percent(value: number, total: number) {
 }
 
 function Login() {
-  const [email, setEmail] = useState(adminEmail);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -86,19 +87,18 @@ function Login() {
     event.preventDefault();
     setLoading(true);
     setMessage("");
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/admin`,
-        shouldCreateUser: true,
-      },
-    });
-    setMessage(
-      error
-        ? "Não foi possível enviar o acesso. Confira o e-mail."
-        : "Enviamos um link de acesso para o seu e-mail.",
-    );
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) setMessage("Não foi possível entrar. Confira seu e-mail e senha.");
+      else setPassword("");
+    } catch {
+      setMessage("Não foi possível conectar. Tente novamente em instantes.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -108,22 +108,32 @@ function Login() {
         <p className={styles.eyebrow}>Área privada</p>
         <h1>Análise do formulário</h1>
         <p>
-          Entre com o e-mail autorizado para visualizar respostas e conversão.
+          Entre com seu e-mail e senha para visualizar respostas e conversão.
         </p>
         <form onSubmit={submit}>
           <label htmlFor="admin-email">E-mail</label>
           <input
             id="admin-email"
+            autoComplete="username"
             onChange={(event) => setEmail(event.target.value)}
             required
             type="email"
             value={email}
           />
+          <label htmlFor="admin-password">Senha</label>
+          <input
+            id="admin-password"
+            autoComplete="current-password"
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type="password"
+            value={password}
+          />
           <button disabled={loading} type="submit">
-            {loading ? "Enviando..." : "Receber link de acesso"}
+            {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-        {message && <div className={styles.loginMessage}>{message}</div>}
+        {message && <div role="alert" className={styles.loginMessage}>{message}</div>}
       </section>
     </main>
   );
@@ -588,43 +598,3 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {filteredLeads.map((lead) => (
-                      <tr key={lead.id}>
-                        <td>{formatDate(lead.criado_em)}</td>
-                        <td>
-                          <strong>{lead.nome}</strong>
-                          <span>{lead.whatsapp}</span>
-                          {lead.instagram && <span>{lead.instagram}</span>}
-                        </td>
-                        <td>{lead.cidade}</td>
-                        <td>
-                          <span className={styles.status}>
-                            {lead.nivel_interesse}
-                          </span>
-                        </td>
-                        <td>
-                          <span>
-                            {(lead.respostas.sintomas ?? [])
-                              .slice(0, 3)
-                              .join(", ") || "—"}
-                          </span>
-                          <small>
-                            {lead.respostas.tempo || "Tempo não informado"}
-                          </small>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!filteredLeads.length && (
-                  <p className={styles.empty}>
-                    Nenhum formulário completo neste período.
-                  </p>
-                )}
-              </div>
-            </section>
-          </>
-        )}
-      </section>
-    </main>
-  );
-}
