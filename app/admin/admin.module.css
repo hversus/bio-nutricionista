@@ -627,6 +627,50 @@
 .empty { font-size: 14px; }
 @keyframes surfaceIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes barIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.contactDialog {
+  width: min(1120px, calc(100vw - 40px)); max-width: none;
+  max-height: calc(100dvh - 40px); padding: 0; margin: auto;
+  border: 1px solid #dce6ed; border-radius: 22px;
+  background: #f7fafc; color: var(--ink); box-shadow: 0 30px 100px #06152655;
+  overflow: auto; overscroll-behavior: contain;
+}
+.contactDialog[open] { animation: surfaceIn 220ms ease-out; }
+.contactDialog::backdrop { background: #071528ad; backdrop-filter: blur(5px); }
+.dialogHeader { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding: 22px 28px; border-bottom: 1px solid var(--line); background: #fff; }
+.dialogHeader h2 { font-size: 24px; overflow-wrap: anywhere; }
+.dialogHeader span { color: var(--muted); font-size: 14px; }
+.dialogHeader button { flex-shrink: 0; }
+.dialogBody { padding: 28px; }
+.dialogColumns { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 24px; align-items: start; }
+.responseSummary, .messageComposer, .followupEditor, .historyDetails { min-width: 0; border: 1px solid var(--line); border-radius: 16px; padding: 22px; background: white; }
+.contactDialog h3 { margin: 0 0 12px; font-size: 19px; letter-spacing: -.02em; }
+.contactDialog p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 10px 0 16px; }
+.responseSummary dl { margin: 0; }
+.responseSummary dl > div { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.responseSummary dl > div:last-child { border: 0; }
+.responseSummary dt { font-size: 12px; font-weight: 650; color: var(--muted); margin-bottom: 5px; }
+.responseSummary dd { margin: 0; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.messageComposer { border-top: 3px solid #178b97; }
+.messageComposer label { display: block; margin: 16px 0 8px; }
+.messageComposer input, .messageComposer textarea { width: 100%; font-size: 16px; }
+.messageComposer textarea { line-height: 1.7; min-height: 300px; background: #f8fbfd; }
+.messageActions { display: flex; flex-wrap: wrap; gap: 10px; }
+.messageActions button:first-child, .whatsappAction { background: #126979; color: #fff; border-color: #126979; }
+.whatsappAction { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 650; margin-top: 12px; }
+.whatsappAction:hover { background: #104f60; }
+.messageComposer .composerHint { font-size: 12px; margin-top: 16px; }
+.historyDetails, .followupEditor { margin-top: 24px; }
+.historyDetails summary { cursor: pointer; font-weight: 650; min-height: 30px; }
+.contactDialog .historyDetails ol { margin-bottom: 0; }
+.followupEditor select { max-width: 100%; }
+@media (max-width: 760px) {
+  .contactDialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 16px; }
+  .dialogHeader { padding: 16px; gap: 10px; }
+  .dialogHeader h2 { font-size: 20px; }
+  .dialogBody { padding: 14px; }
+  .dialogColumns { grid-template-columns: 1fr; gap: 16px; }
+  .responseSummary, .messageComposer, .followupEditor, .historyDetails { padding: 16px; }
+}
 @media (max-width: 1100px) {
   .gridTwo { grid-template-columns: 1fr; }
   .kpis { grid-template-columns: repeat(2,minmax(0,1fr)); }

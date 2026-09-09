@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import styles from "./admin.module.css";
+import ContactDialog, { MessageDraft } from "./contact-dialog";
 
 type Event = { session_id: string; event_name: string; step_key: string; answer: unknown; created_at: string };
 type Lead = { session_id: string; nome: string; whatsapp: string; criado_em: string };
@@ -20,6 +21,7 @@ export default function Contacts({ events, leads, client }: { events: Event[]; l
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const messageDrafts = useRef<Record<string, MessageDraft>>({});
   useEffect(() => {
     let live = true;
     void (async () => {
@@ -49,6 +51,12 @@ export default function Contacts({ events, leads, client }: { events: Event[]; l
     }).sort((a, b) => Date.parse(b.lastAt) - Date.parse(a.lastAt));
   }, [events, leads, records, now]);
   const current = contacts.find(c => c.id === selected);
+  function closeContact() {
+    if (saving) return;
+    const changed = notes !== (current?.record?.notes || "") || status !== (current?.record?.status || "Novo");
+    if (changed && !window.confirm("Fechar sem salvar as alterações do acompanhamento?")) return;
+    setSelected("");
+  }
   async function save() {
     setSaving(true); setMessage("");
     try {
@@ -66,19 +74,16 @@ export default function Contacts({ events, leads, client }: { events: Event[]; l
       <input aria-label="Buscar contato" placeholder="Nome ou WhatsApp" value={query} onChange={e => setQuery(e.target.value)} />
       <select aria-label="Filtrar andamento" value={filter} onChange={e => setFilter(e.target.value)}>{["Todos", "Em andamento", "Possível abandono", "Concluído", ...statuses].map(s => <option key={s}>{s}</option>)}</select>
     </div>
-    {message && <p role="status">{message}</p>}
+    {message && !current && <p role="status">{message}</p>}
     <div className={styles.tableWrap}><table><thead><tr><th>Contato</th><th>Formulário</th><th>Última etapa</th><th>Atendimento</th><th>Histórico</th></tr></thead><tbody>
       {contacts.filter(c => `${c.name} ${c.phone}`.toLowerCase().includes(query.toLowerCase()) && (filter === "Todos" || c.state === filter || (c.record?.status || "Novo") === filter)).map(c => <tr key={c.id}><td>{c.name === "—" ? "Nome não informado" : c.name}<span>{c.phone}</span></td><td>{c.state}</td><td>{labels[c.step] || c.step}<span>{new Date(c.lastAt).toLocaleString("pt-BR")}</span></td><td>{c.record?.status || "Novo"}</td><td><button disabled={saving} onClick={() => {setSelected(c.id); setStatus(c.record?.status || "Novo"); setNotes(c.record?.notes || ""); setMessage("");}}>Abrir</button></td></tr>)}
     </tbody></table></div>
     {!contacts.length && <p>Nenhum contato neste período.</p>}
-    {current && <section className={styles.panel} aria-label="Detalhes do contato">
-      <h3>{current.name === "—" ? "Contato sem nome" : current.name}</h3>
-      <p>Histórico disponível no período selecionado. Se faltar o início, selecione todo o período.</p>
-      <ol>{current.history.map((event, index) => <li key={index}><time>{new Date(event.created_at).toLocaleString("pt-BR")}</time> · {labels[event.step_key] || event.step_key} · {event.event_name === "answered" ? answer(event.answer) : event.event_name === "step_viewed" ? "Pergunta exibida" : event.event_name === "completed" ? "Envio concluído" : "Conversa iniciada"}</li>)}</ol>
+    {current && <ContactDialog key={current.id} id={current.id} name={current.name} client={client} onClose={closeContact} saving={saving} savedDraft={messageDrafts.current[current.id]} onDraftChange={draft => { messageDrafts.current[current.id] = draft; }}>
       <label>Etapa do atendimento <select value={status} onChange={e => setStatus(e.target.value)}>{statuses.map(s => <option key={s}>{s}</option>)}</select></label>
       <label style={{ display: "block", marginTop: 16 }}>Observações<textarea style={{ display: "block", width: "100%", minHeight: 100 }} maxLength={5000} value={notes} onChange={e => setNotes(e.target.value)} /></label>
       <button disabled={saving} onClick={save}>{saving ? "Salvando..." : "Salvar acompanhamento"}</button>{" "}
-      <button disabled={saving} onClick={() => setSelected("")}>Fechar</button>
-    </section>}
+      {message && <p role="status">{message}</p>}
+    </ContactDialog>}
   </section>;
 }
