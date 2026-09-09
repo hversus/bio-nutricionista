@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { symptomReply, durationReply, attemptReply } from "../lib/conversation-replies";
 import {
   FormEvent,
   ReactNode,
@@ -449,7 +450,7 @@ export default function Home() {
       trackFunnel(sessionId.current, "step_viewed", "sintomas", 2);
     } else if (stage === "whatsapp") {
       if (value.replace(/\D/g, "").length < 10)
-        return setError("Preciso do DDD e do número completo.");
+        return setError("Preciso do DDD + número, com pelo menos 10 dígitos.");
       updateLead({ whatsapp: value });
       addMine(value);
       trackFunnel(sessionId.current, "answered", "whatsapp", 6, value);
@@ -481,15 +482,7 @@ export default function Home() {
     );
     trackFunnel(sessionId.current, "answered", "sintomas", 2, values);
     setStage("intro");
-    if (values.includes("Já tenho diagnóstico")) {
-      await addLu("Você marcou que já tem um diagnóstico. Quero conhecer essa história e entender como está o seu acompanhamento hoje.", 900);
-    } else if (values.some(value => ["Formigamento nas mãos e pés", "Feridas que demoram a cicatrizar", "Sede excessiva"].includes(value))) {
-      await addLu("Obrigada por me contar o que você está sentindo. Quero entender quando esses sinais começaram e como eles aparecem no seu dia a dia.", 900);
-    } else if (values.some(value => ["Fome frequente", "Vontade/compulsão por doces"].includes(value))) {
-      await addLu("Você contou sobre sua fome e sua relação com os doces. Quero te ouvir sem julgamentos e entender como isso acontece na sua rotina.", 900);
-    } else {
-      await addLu("Obrigada por compartilhar isso comigo. Quero entender seus incômodos, sua rotina e o que você gostaria de melhorar com o acompanhamento.", 900);
-    }
+    await addLu(symptomReply({ ...leadRef.current, sintomas: values }), 900);
     await addLu("Há quanto tempo você sente isso?", 700);
     setStage("tempo");
     trackFunnel(sessionId.current, "step_viewed", "tempo", 3);
@@ -501,6 +494,7 @@ export default function Home() {
     addMine(value);
     trackFunnel(sessionId.current, "answered", "tempo", 3, value);
     setStage("intro");
+    await addLu(durationReply({ ...leadRef.current, tempo: value }), 900);
     await addLu(
       "E o que você já tentou até aqui? Marca o que mais se parece com o seu caso.",
       900,
@@ -515,7 +509,7 @@ export default function Home() {
     addMine(value);
     trackFunnel(sessionId.current, "answered", "tentou", 4, value);
     setStage("intro");
-    await addLu("Obrigada por me contar. Quero entender sua experiência e o que faz sentido para a sua rotina.", 1300);
+    await addLu(attemptReply(value, leadRef.current), 1300);
     await addLu(
       <>
         Quero conhecer sua alimentação, seus sintomas e sua rotina para
