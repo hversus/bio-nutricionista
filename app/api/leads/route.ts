@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       instagram: body.instagram?.trim() || null,
       objetivo: Array.isArray(body.sintomas)
         ? body.sintomas.join(", ")
-        : "Saúde intestinal",
+        : "Acompanhamento nutricional",
       nivel_interesse: body.decisao.trim(),
       respostas: {
         sintomas: body.sintomas || [],

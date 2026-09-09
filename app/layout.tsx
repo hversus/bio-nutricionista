@@ -2,19 +2,15 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Luana Turque | Nutricionista do seu intestino",
+  title: "Vitória Serafim | Nutricionista",
   description:
-    "Me conta o que você sente. Oito perguntas rápidas com a Lu, nutricionista especialista em saúde intestinal, e no fim você escolhe o próximo passo.",
+    "Conheça a nutricionista Vitória Serafim. Conte o que você vem sentindo em uma conversa rápida e conheça o acompanhamento nutricional.",
   keywords: [
-    "nutricionista intestinal",
-    "saúde intestinal",
+    "Vitória Serafim",
+    "acompanhamento nutricional",
     "nutricionista online",
-    "inchaço abdominal",
-    "candidíase de repetição",
-    "intestino preso",
-    "SIBO",
-    "disbiose",
-    "nutricionista funcional",
+    "alimentação",
+    "emagrecimento",
   ],
   robots: { index: true, follow: true },
 };

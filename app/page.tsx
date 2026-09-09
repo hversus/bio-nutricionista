@@ -52,10 +52,11 @@ const initialLead: Lead = {
   fora: null,
   decisao: "",
 };
-const draftKey = "luana_bio_draft_v2";
+const draftKey = "vitoria_bio_draft_v1";
 const diagnosticBrazil = "R$ 350";
 const diagnosticAbroad = "60€";
-const sessionStorageKey = "luana_bio_session_v1";
+const sessionStorageKey = "vitoria_bio_session_v1";
+const contactWhatsapp = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP?.replace(/\D/g, "") || "";
 const stages: Stage[] = ["nome", "sintomas", "tempo", "tentou", "fora", "whatsapp", "instagram", "origem", "decisao"];
 const questions: Record<string, string> = {
   nome: "Como você se chama?", sintomas: "O que você está sentindo?",
@@ -93,22 +94,12 @@ function trackFunnel(
 }
 
 const symptoms = [
-  { id: "Inchaço abdominal constante", label: "Vivo inchada" },
-  {
-    id: "Intestino preso / constipação",
-    label: "Fico dias sem ir ao banheiro",
-  },
-  { id: "Candidíase de repetição", label: "Candidíase que volta todo mês" },
-  { id: "Gases e desconforto digestivo", label: "Gases o tempo todo" },
-  { id: "Cansaço e falta de energia", label: "Vivo cansada" },
-  { id: "Ansiedade ou compulsão alimentar", label: "Ansiedade e compulsão" },
-  { id: "Acne ou pele que não melhora", label: "Pele que não melhora" },
-  { id: "Dificuldade para emagrecer", label: "Não consigo emagrecer" },
-  { id: "Diarreia ou intestino irregular", label: "Intestino imprevisível" },
-  {
-    id: "Já tenho diagnóstico (disbiose, SIBO, SII...)",
-    label: "Já tenho diagnóstico",
-  },
+  { id: "Dificuldade para emagrecer", label: "Dificuldade para emagrecer" },
+  { id: "Fome frequente", label: "Fome frequente" },
+  { id: "Vontade/compulsão por doces", label: "Vontade/compulsão por doces" },
+  { id: "Sono ou cansaço depois das refeições", label: "Sono ou cansaço depois das refeições" },
+  { id: "Falta de energia ao longo do dia", label: "Falta de energia ao longo do dia" },
+  { id: "Acúmulo de gordura abdominal", label: "Acúmulo de gordura abdominal" },
 ];
 
 const durations = [
@@ -127,76 +118,6 @@ const attempts = [
   "Ainda nada",
 ];
 
-const attemptReplies: Record<string, string> = {
-  "Cortei glúten, lactose ou açúcar por conta":
-    "Cortar no escuro é o que eu mais vejo: você tira o glúten, depois a lactose, depois o açúcar, sem saber se é isso mesmo que te faz inchar. A lista vai ficando menor e o sintoma continua. Quase sempre o problema não é o alimento, é como o seu intestino está processando o que você come.",
-  "Probiótico ou laxante da farmácia":
-    "Laxante e probiótico de farmácia compram uns dias de paz. Sem a sua alimentação ajustada no lugar certo, na semana seguinte você volta a ficar presa e inchada. O sintoma some, a causa continua ali.",
-  "Protocolo que vi na internet":
-    "O protocolo que viralizou é de outra pessoa. As bactérias que vivem no seu intestino são suas, com a sua história e a sua rotina. Receita copiada não enxerga isso, e por isso trava.",
-  "Já passei por médico ou nutri":
-    "Então você provavelmente já ouviu que “é normal”, ou saiu com um cardápio na mão e o resto por sua conta. O que costuma faltar é investigar a causa e ter alguém ajustando a rota com você quando a semana aperta.",
-  "Remédio pra emagrecer":
-    "Remédio pra emagrecer alivia por um tempo, mas com o intestino desorganizado o corpo trabalha contra você mesmo com o déficit certo. Quando a raiz é ajustada, o resto destrava.",
-  "Ainda nada":
-    "Então você chegou antes de gastar dinheiro tentando no escuro. É o melhor momento pra investigar a causa, antes de cortar alimento por conta ou entrar em protocolo de internet.",
-};
-
-const testimonials: Record<
-  string,
-  { name: string; badge: string; text: string }
-> = {
-  "Inchaço abdominal constante": {
-    name: "Marília Simon",
-    badge: "Parou de estufar",
-    text: "Sofria com estufamento abdominal diário há muitos anos e foi com os testes que fizemos em minha dieta que consegui parar de ter esse sintoma.",
-  },
-  "Gases e desconforto digestivo": {
-    name: "Marília Simon",
-    badge: "Parou de estufar",
-    text: "Sofria com estufamento abdominal diário há muitos anos e foi com os testes que fizemos em minha dieta que consegui parar de ter esse sintoma.",
-  },
-  "Intestino preso / constipação": {
-    name: "Beatriz Ribeiro",
-    badge: "1x por semana → 3 a 4x",
-    text: "O meu “normal” era ficar sete dias sem ir ao banheiro. Passei de uma vez por semana para três a quatro vezes.",
-  },
-  "Diarreia ou intestino irregular": {
-    name: "Helena Oenning",
-    badge: "Regulado em semanas",
-    text: "Antes da consulta estava dependente de laxante. Hoje meu intestino é muito mais regulado, mesmo com poucas semanas de acompanhamento.",
-  },
-  "Acne ou pele que não melhora": {
-    name: "Nami Studio",
-    badge: "Resolvido em 3 meses",
-    text: "Chamei a Lu para tratar algo em que eu estava há dois anos gastando dinheiro com diversos tratamentos. Em 3 meses ela resolveu!",
-  },
-  "Candidíase de repetição": {
-    name: "Marina Menegaz",
-    badge: "Nunca mais teve",
-    text: "Tive candidíase de repetição por um ano e ter conhecido a Lu foi a minha salvação. Nunca mais tive nenhum tipo de problema.",
-  },
-  "Dificuldade para emagrecer": {
-    name: "Bruna",
-    badge: "Voltou ao normal em 3 meses",
-    text: "Em 3 meses descobrimos vários poréns do meu corpo, adequamos a dieta e conseguimos voltar para quase um normal.",
-  },
-  "Cansaço e falta de energia": {
-    name: "Yasmin Febit",
-    badge: "Resultado em menos de 2 semanas",
-    text: "Antes eu ficava dias sem ir ao banheiro e agora, com menos de duas semanas, estou tendo resultado todos os dias!",
-  },
-  "Ansiedade ou compulsão alimentar": {
-    name: "Micleide Celestino",
-    badge: "Fim do terrorismo alimentar",
-    text: "A Lu trabalha com evidências. Isso poupa pacientes do sofrimento causado por terrorismo alimentar.",
-  },
-  "Já tenho diagnóstico (disbiose, SIBO, SII...)": {
-    name: "Beatriz Ribeiro",
-    badge: "Depois de tentar tudo",
-    text: "Já tinha tentado inúmeras consultas, profissionais e dietas rigorosas. A Lu mudou a minha mente sobre constância.",
-  },
-};
 
 function Icon({
   name,
@@ -289,22 +210,6 @@ function Icon({
   );
 }
 
-function Testimonial({
-  data,
-}: {
-  data: { name: string; badge: string; text: string };
-}) {
-  return (
-    <div className="cit">
-      <b>{data.name}</b>
-      <small>
-        Avaliação no Google · <span aria-label="5 de 5 estrelas">★★★★★</span> ·{" "}
-        {data.badge}
-      </small>
-      <p>{data.text}</p>
-    </div>
-  );
-}
 
 function PickerSheet({
   type,
@@ -492,16 +397,16 @@ export default function Home() {
     trackFunnel(sessionId.current, "started", "inicio", 0);
     (async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 500));
-      await addLu("Oi. Eu sou a Lu, nutricionista do seu intestino.", 700);
+      await addLu("Oie. Sou a Vitória, sua futura nutri.", 700);
       await addLu(
-        "Se você chegou até aqui, é porque alguma coisa no seu corpo não anda bem. Pode ficar tranquila: vai ser um prazer te ajudar a resolver o que você está sentindo.",
+        "Se você chegou até aqui, é porque entendeu que alguma coisa no seu corpo não está funcionando bem. Mas pode ficar tranquila, vai ser um prazer te ajudar a resolver o que você está sentindo.",
         1300,
       );
       await addLu(
-        "Antes de qualquer coisa, eu quero te conhecer melhor. São 8 perguntas rápidas, uns 3 minutos, e no fim eu te explico como funciona comigo.",
+        "Antes de qualquer coisa, preciso te conhecer melhor. São perguntas bem rápidas, leva apenas uns 3 minutos, e no fim te explico como funciona comigo.",
         1300,
       );
-      await addLu("Pra começar: como você se chama?", 700);
+      await addLu("Para começar, qual é o seu nome?", 700);
       setStage("nome");
       trackFunnel(sessionId.current, "step_viewed", "nome", 1);
     })();
@@ -533,8 +438,8 @@ export default function Home() {
       setStage("intro");
       await addLu(
         <>
-          Prazer, {firstName(value)}. O que você sente hoje? Marca tudo que for
-          seu.
+          Prazer, {firstName(value)}. E o que você vem sentindo? Marque tudo o
+          que você conseguir lembrar.
         </>,
         900,
       );
@@ -574,21 +479,6 @@ export default function Home() {
     );
     trackFunnel(sessionId.current, "answered", "sintomas", 2, values);
     setStage("intro");
-    const unique = Array.from(
-      new Map(
-        values
-          .map((value) => testimonials[value])
-          .filter(Boolean)
-          .map((item) => [item.name, item]),
-      ).values(),
-    ).slice(0, 2);
-    if (unique.length) {
-      await addLu(
-        "Isso que você marcou eu vejo toda semana no consultório. Olha quem chegou assim e escreveu depois no Google:",
-        1100,
-      );
-      for (const item of unique) await addLu(<Testimonial data={item} />, 700);
-    }
     await addLu("Há quanto tempo é assim?", 700);
     setStage("tempo");
     trackFunnel(sessionId.current, "step_viewed", "tempo", 3);
@@ -614,13 +504,11 @@ export default function Home() {
     addMine(value);
     trackFunnel(sessionId.current, "answered", "tentou", 4, value);
     setStage("intro");
-    await addLu(attemptReplies[value] || "Faz sentido.", 1300);
+    await addLu("Obrigada por me contar. Quero entender sua experiência e o que faz sentido para a sua rotina.", 1300);
     await addLu(
       <>
-        É por isso que eu não começo com cardápio. Eu começo{" "}
-        <b>investigando a causa</b>: como o seu intestino se move, o que ele
-        absorve e quais bactérias estão desequilibradas. É daí que sai o
-        protocolo, e é assim que funciona comigo:
+        Quero conhecer sua alimentação, seus sintomas e sua rotina para
+        conversar sobre um acompanhamento individualizado:
         <ul className="lista">
           <li>
             <b>90 dias</b> · Acompanhamento próximo, 100% online, com protocolo
@@ -820,7 +708,7 @@ export default function Home() {
           ? "@seuperfil"
           : "Toca numa opção acima";
   const whatsappText = encodeURIComponent(
-    `Olá, Lu! Sou a ${firstName(lead.nome)}, acabei de preencher o link da bio e optei pela opção: ${lead.decisao}.`,
+    `Olá, Vitória! Sou a ${firstName(lead.nome)}, acabei de preencher o link da bio e optei pela opção: ${lead.decisao}.`,
   );
 
   return (
@@ -834,7 +722,7 @@ export default function Home() {
             <Image alt="" fill priority sizes="40px" src="/profile.jpg" />
           </span>
           <span className="quem">
-            <b>Luana Turque</b>
+            <b>Vitória Serafim</b>
             <small className={typing ? "dig" : ""}>
               {typing ? "digitando..." : "online"}
             </small>
@@ -996,16 +884,16 @@ export default function Home() {
               </button>
             </div>
           )}
-          {stage === "fim" && lead.decisao !== "Ainda não" && (
+          {stage === "fim" && lead.decisao !== "Ainda não" && contactWhatsapp && (
             <div className="botoes">
               <a
                 className="bot"
-                href={`https://wa.me/5522981090202?text=${whatsappText}`}
+                href={`https://wa.me/${contactWhatsapp}?text=${whatsappText}`}
                 rel="noreferrer"
                 target="_blank"
               >
                 <Icon name="link" />
-                Chamar a Lu no WhatsApp
+                Chamar a Vitória no WhatsApp
               </a>
             </div>
           )}

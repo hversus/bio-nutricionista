@@ -106,7 +106,7 @@ function Login() {
   return (
     <main className={styles.loginPage}>
       <section className={styles.loginCard}>
-        <div className={styles.brandMark}>LT</div>
+        <div className={styles.brandMark}>VS</div>
         <p className={styles.eyebrow}>Área privada</p>
         <h1>Análise do formulário</h1>
         <p>
@@ -429,9 +429,9 @@ export default function AdminPage() {
   return (
     <main className={styles.dashboard}>
       <aside className={styles.sidebar}>
-        <div className={styles.logo}>LT</div>
+        <div className={styles.logo}>VS</div>
         <div>
-          <strong>Luana Turque</strong>
+          <strong>Vitória Serafim</strong>
           <span>Análise do formulário</span>
         </div>
         <nav>
