@@ -44,7 +44,7 @@ export function symptomReply(context: Context): string {
 }
 
 const durationReplies: Record<string, string> = {
-  "Menos de 6 meses": "Você percebeu isso há menos de seis meses. Quero entender o que mudou na sua rotina nesse período e como você estava antes.",
+  "Menos de 6 meses": "Você percebeu isso há pouco tempo. Vamos analisar o que mudou...",
   "6 meses a 1 ano": "Já são alguns meses convivendo com isso. Quero entender se acontece com frequência ou se houve fases em que você se sentiu melhor.",
   "1 a 3 anos": "Entre um e três anos é uma parte da sua história que merece ser ouvida. Quero conhecer o que mudou nesse caminho e o que mais te incomoda hoje.",
   "Mais de 3 anos": "Você convive com isso há mais de três anos. Quero ouvir essa trajetória com calma, incluindo o que já ajudou e o que continua difícil.",
