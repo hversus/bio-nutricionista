@@ -183,6 +183,16 @@ input {
   margin-right: 2px;
   display: inline-block;
 }
+.bio .aviso > span {
+  display: grid;
+  gap: 3px;
+}
+.bio .aviso small {
+  color: inherit;
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0.78;
+}
 .bio .aviso.erro {
   color: var(--erro);
   background: #fde8e6;

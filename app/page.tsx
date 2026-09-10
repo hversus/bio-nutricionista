@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { symptomReply, durationReply, attemptReply } from "../lib/conversation-replies";
+import { FUNNEL_INACTIVITY_MS } from "../lib/funnel-settings";
 import {
   FormEvent,
   ReactNode,
@@ -385,7 +386,7 @@ export default function Home() {
     }
     try {
       const saved = JSON.parse(localStorage.getItem(draftKey) || "null");
-      if (saved?.data && Date.now() - saved.timestamp < 604800000 && stages.includes(saved.nextStage)) {
+      if (saved?.data && Date.now() - saved.timestamp < FUNNEL_INACTIVITY_MS && stages.includes(saved.nextStage)) {
         nextStage.current = saved.nextStage;
         updateLead(saved.data);
         const resume = saved.nextStage as Stage;
@@ -401,6 +402,10 @@ export default function Home() {
         setStage(resume);
         trackFunnel(sessionId.current, "step_viewed", resume, stages.indexOf(resume) + 1);
         return;
+      }
+      if (saved) {
+        localStorage.removeItem(draftKey);
+        localStorage.removeItem(sessionStorageKey);
       }
     } catch {}
     sessionId.current = crypto.randomUUID();
@@ -734,11 +739,14 @@ export default function Home() {
             <Icon name="menu" />
           </span>
         </header>
-        {stage !== "intro" && stage !== "fim" && <div style={{ padding: "8px 16px", fontSize: 14, background: "#fff" }}>Pergunta {stages.indexOf(stage) + 1} de {stages.length} · Progresso guardado neste navegador</div>}
         <section aria-live="polite" className="fio" ref={feed}>
           <span className="dia">Hoje</span>
           <span className="aviso">
-            <Icon name="lock" /> Suas respostas são registradas ao longo da conversa para preparar seu atendimento e entender o preenchimento. Apenas a equipe autorizada tem acesso. O progresso fica neste navegador por até 7 dias.
+            <Icon name="lock" />
+            <span>
+              Suas respostas são confidenciais e só a Vitória lê.
+              <small>Vitória Serafim Nutrição · CRN-11 nº 22204/P</small>
+            </span>
           </span>
           {messages.map((message) => (
             <div

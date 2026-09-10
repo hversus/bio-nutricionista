@@ -5,6 +5,7 @@ import styles from "./admin.module.css";
 import ContactDialog, { MessageDraft } from "./contact-dialog";
 import DeleteForm from './delete-form';
 import type { PatientSeed } from '../../lib/patients';
+import { FUNNEL_INACTIVITY_MINUTES, FUNNEL_INACTIVITY_MS } from '../../lib/funnel-settings';
 
 type Event = { session_id: string; event_name: string; step_key: string; answer: unknown; created_at: string };
 type Lead = { session_id: string; nome: string; whatsapp: string; criado_em: string };
@@ -14,7 +15,8 @@ const statuses = ["Novo", "Contatado", "Consulta agendada", "Não avançou"];
 function answer(value: unknown) { return Array.isArray(value) ? value.join(", ") : value == null ? "—" : String(value); }
 
 export default function Contacts({ events, leads, client, onDeleted, onPatient }: { events: Event[]; leads: Lead[]; client: SupabaseClient; onDeleted: () => void; onPatient: (seed: PatientSeed) => void }) {
-  const [deleting, setDeleting] = useState<{id:string;name:string}|null>(null);
+  const [deleting, setDeleting] = useState<{ids:string[];name:string}|null>(null);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Todos");
@@ -50,10 +52,13 @@ export default function Contacts({ events, leads, client, onDeleted, onPatient }
       const last = history[history.length - 1];
       const complete = !!lead || history.some(e => e.event_name === "completed");
       const lastAt = last?.created_at || lead!.criado_em;
-      return { id, history, name: lead?.nome || answer(replies.nome), phone: lead?.whatsapp || (typeof replies.whatsapp === "string" ? replies.whatsapp : ""), lastAt, step: last?.step_key || "completed", state: complete ? "Concluído" : now - Date.parse(lastAt) >= 1800000 ? "Possível abandono" : "Em andamento", record: records.find(r => r.session_id === id) };
+      return { id, history, name: lead?.nome || answer(replies.nome), phone: lead?.whatsapp || (typeof replies.whatsapp === "string" ? replies.whatsapp : ""), lastAt, step: last?.step_key || "completed", state: complete ? "Concluído" : now - Date.parse(lastAt) >= FUNNEL_INACTIVITY_MS ? "Possível abandono" : "Em andamento", record: records.find(r => r.session_id === id) };
     }).sort((a, b) => Date.parse(b.lastAt) - Date.parse(a.lastAt));
   }, [events, leads, records, now]);
+  const visibleContacts = useMemo(() => contacts.filter(c => `${c.name} ${c.phone}`.toLowerCase().includes(query.toLowerCase()) && (filter === "Todos" || c.state === filter || (c.record?.status || "Novo") === filter)), [contacts, filter, query]);
   const current = contacts.find(c => c.id === selected);
+  function toggleChecked(id:string){setChecked(current=>{const next=new Set(current);if(next.has(id))next.delete(id);else next.add(id);return next;});}
+  function toggleVisible(){const ids=visibleContacts.map(contact=>contact.id);const all=ids.length>0&&ids.every(id=>checked.has(id));setChecked(current=>{const next=new Set(current);ids.forEach(id=>all?next.delete(id):next.add(id));return next;});}
   function closeContact() {
     if (saving) return;
     const changed = notes !== (current?.record?.notes || "") || status !== (current?.record?.status || "Novo");
@@ -72,17 +77,18 @@ export default function Contacts({ events, leads, client, onDeleted, onPatient }
   }
   return <section className={styles.panel}>
     <h2>Todos os contatos e histórico</h2>
-    <p>Inclui respostas parciais. Possível abandono: sem nova resposta há pelo menos 30 minutos. Uma nova resposta reabre o andamento.</p>
+    <p>Inclui respostas parciais. Possível abandono: sem nova resposta há pelo menos {FUNNEL_INACTIVITY_MINUTES} minutos. Uma nova resposta reabre o andamento.</p>
     <div className={styles.tableHeader}>
       <input aria-label="Buscar contato" placeholder="Nome ou WhatsApp" value={query} onChange={e => setQuery(e.target.value)} />
       <select aria-label="Filtrar andamento" value={filter} onChange={e => setFilter(e.target.value)}>{["Todos", "Em andamento", "Possível abandono", "Concluído", ...statuses].map(s => <option key={s}>{s}</option>)}</select>
+      {checked.size>0&&<button className={styles.dangerButton} onClick={()=>setDeleting({ids:Array.from(checked),name:`${checked.size} respostas selecionadas`})}>Excluir selecionadas ({checked.size})</button>}
     </div>
     {message && !current && <p role="status">{message}</p>}
-    <div className={styles.tableWrap}><table><thead><tr><th>Contato</th><th>Formulário</th><th>Última etapa</th><th>Atendimento</th><th>Histórico</th></tr></thead><tbody>
-      {contacts.filter(c => `${c.name} ${c.phone}`.toLowerCase().includes(query.toLowerCase()) && (filter === "Todos" || c.state === filter || (c.record?.status || "Novo") === filter)).map(c => <tr key={c.id}><td>{c.name === "—" ? "Nome não informado" : c.name}<span>{c.phone}</span></td><td>{c.state}</td><td>{labels[c.step] || c.step}<span>{new Date(c.lastAt).toLocaleString("pt-BR")}</span></td><td>{c.record?.status || "Novo"}</td><td><button disabled={saving} onClick={() => {setSelected(c.id); setStatus(c.record?.status || "Novo"); setNotes(c.record?.notes || ""); setMessage("");}}>Abrir</button>{' '}<button disabled={saving} onClick={()=>setDeleting({id:c.id,name:c.name})}>Excluir</button></td></tr>)}
+    <div className={styles.tableWrap}><table><thead><tr><th><input aria-label="Selecionar todas as respostas visíveis" checked={visibleContacts.length>0&&visibleContacts.every(c=>checked.has(c.id))} className={styles.rowCheckbox} onChange={toggleVisible} type="checkbox" /></th><th>Contato</th><th>Formulário</th><th>Última etapa</th><th>Atendimento</th><th>Histórico</th></tr></thead><tbody>
+      {visibleContacts.map(c => <tr key={c.id}><td><input aria-label={`Selecionar resposta de ${c.name}`} checked={checked.has(c.id)} className={styles.rowCheckbox} onChange={()=>toggleChecked(c.id)} type="checkbox" /></td><td>{c.name === "—" ? "Nome não informado" : c.name}<span>{c.phone}</span></td><td>{c.state}</td><td>{labels[c.step] || c.step}<span>{new Date(c.lastAt).toLocaleString("pt-BR")}</span></td><td>{c.record?.status || "Novo"}</td><td><button disabled={saving} onClick={() => {setSelected(c.id); setStatus(c.record?.status || "Novo"); setNotes(c.record?.notes || ""); setMessage("");}}>Abrir</button>{' '}<button disabled={saving} onClick={()=>setDeleting({ids:[c.id],name:c.name})}>Excluir</button></td></tr>)}
     </tbody></table></div>
     {!contacts.length && <p>Nenhum contato neste período.</p>}
-    {deleting&&<DeleteForm client={client} sessionId={deleting.id} name={deleting.name} onClose={()=>setDeleting(null)} onDeleted={()=>{delete messageDrafts.current[deleting.id];setRecords(rows=>rows.filter(r=>r.session_id!==deleting.id));setDeleting(null);setSelected('');onDeleted();}}/>}
+    {deleting&&<DeleteForm client={client} sessionIds={deleting.ids} name={deleting.name} onClose={()=>setDeleting(null)} onDeleted={()=>{deleting.ids.forEach(id=>delete messageDrafts.current[id]);setRecords(rows=>rows.filter(r=>!deleting.ids.includes(r.session_id)));setChecked(current=>{const next=new Set(current);deleting.ids.forEach(id=>next.delete(id));return next;});setDeleting(null);setSelected('');onDeleted();}}/>}
     {current && <ContactDialog key={current.id} id={current.id} name={current.name} client={client} onClose={closeContact} saving={saving} savedDraft={messageDrafts.current[current.id]} onDraftChange={draft => { messageDrafts.current[current.id] = draft; }}>
       <label>Etapa do atendimento <select value={status} onChange={e => setStatus(e.target.value)}>{statuses.map(s => <option key={s}>{s}</option>)}</select></label>
       <label style={{ display: "block", marginTop: 16 }}>Observações<textarea style={{ display: "block", width: "100%", minHeight: 100 }} maxLength={5000} value={notes} onChange={e => setNotes(e.target.value)} /></label>

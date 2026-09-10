@@ -1,8 +1,10 @@
 "use client";
 
 import { createClient, Session } from "@supabase/supabase-js";
+import Image from "next/image";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabasePublishableKey, supabaseUrl } from "../../lib/supabase-config";
+import { FUNNEL_INACTIVITY_MINUTES, FUNNEL_INACTIVITY_MS } from "../../lib/funnel-settings";
 import styles from "./admin.module.css";
 import Contacts from "./contacts";
 import Patients from './patients';
@@ -71,6 +73,15 @@ const orderedSteps = [
   "completed",
 ];
 
+type AdminView = "overview" | "funnel" | "responses" | "forms" | "patients";
+const adminViews: Record<AdminView, { hash: string; eyebrow: string; title: string }> = {
+  overview: { hash: "visao-geral", eyebrow: "Painel de conversão", title: "Visão geral" },
+  funnel: { hash: "funil", eyebrow: "Jornada do formulário", title: "Funil de respostas" },
+  responses: { hash: "respostas", eyebrow: "Análise individual", title: "Respostas e contatos" },
+  forms: { hash: "formularios", eyebrow: "Leads concluídos", title: "Formulários completos" },
+  patients: { hash: "pacientes", eyebrow: "Área clínica", title: "Pacientes" },
+};
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -109,7 +120,7 @@ function Login() {
   return (
     <main className={styles.loginPage}>
       <section className={styles.loginCard}>
-        <div className={styles.brandMark}>VS</div>
+        <Image className={styles.adminProfilePhoto} src="/profile.jpg" alt="Vitória Serafim" width={72} height={72} priority />
         <p className={styles.eyebrow}>Área privada</p>
         <h1>Análise do formulário</h1>
         <p>
@@ -153,15 +164,21 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [tab,setTab]=useState<'analytics'|'patients'>('analytics');
+  const [view,setView]=useState<AdminView>('overview');
   const [patientSeed,setPatientSeed]=useState<PatientSeed|null>(null);
-  const [deleting,setDeleting]=useState<{id:string;name:string}|null>(null);
+  const [deleting,setDeleting]=useState<{ids:string[];name:string}|null>(null);
+  const [selectedForms,setSelectedForms]=useState<Set<string>>(new Set());
   const clearPatientSeed=useCallback(()=>setPatientSeed(null),[]);
-  function startPatient(seed:PatientSeed){setPatientSeed(seed);setTab('patients');window.location.hash='pacientes';window.scrollTo({top:0});}
+  function goToView(next:AdminView){setView(next);window.location.hash=adminViews[next].hash;window.scrollTo({top:0});}
+  function startPatient(seed:PatientSeed){setPatientSeed(seed);goToView('patients');}
   useEffect(()=>{
-    const syncTab=()=>setTab(window.location.hash==='#pacientes'?'patients':'analytics');
-    syncTab();window.addEventListener('hashchange',syncTab);
-    return()=>window.removeEventListener('hashchange',syncTab);
+    const syncView=()=>{
+      const hash=window.location.hash.replace('#','');
+      const next=(Object.entries(adminViews).find(([,item])=>item.hash===hash)?.[0] || 'overview') as AdminView;
+      setView(next);
+    };
+    syncView();window.addEventListener('hashchange',syncView);
+    return()=>window.removeEventListener('hashchange',syncView);
   },[]);
 
   useEffect(() => {
@@ -317,7 +334,7 @@ export default function AdminPage() {
 
     const started = reached.get("inicio")?.size ?? 0;
     const completed = reached.get("completed")?.size ?? 0;
-    const abandoned = Array.from(sessions.values()).filter(item => !item.completedAt && Date.now() - (item.lastAt || item.startedAt) >= 1800000).length;
+    const abandoned = Array.from(sessions.values()).filter(item => !item.completedAt && Date.now() - (item.lastAt || item.startedAt) >= FUNNEL_INACTIVITY_MS).length;
     const completedDurations = Array.from(sessions.values())
       .filter((item) => item.completedAt)
       .map((item) => (item.completedAt! - item.startedAt) / 60000)
@@ -339,7 +356,7 @@ export default function AdminPage() {
 
     const dropoffs = new Map<string, number>();
     for (const item of Array.from(sessions.values())) {
-      if (!item.completedAt && Date.now() - (item.lastAt || item.startedAt) >= 1800000)
+      if (!item.completedAt && Date.now() - (item.lastAt || item.startedAt) >= FUNNEL_INACTIVITY_MS)
         dropoffs.set(item.lastStep, (dropoffs.get(item.lastStep) ?? 0) + 1);
     }
 
@@ -383,6 +400,24 @@ export default function AdminPage() {
         .some((value) => String(value).toLowerCase().includes(normalized)),
     );
   }, [leads, query]);
+
+  function toggleForm(sessionId: string) {
+    setSelectedForms(current => {
+      const next = new Set(current);
+      if (next.has(sessionId)) next.delete(sessionId); else next.add(sessionId);
+      return next;
+    });
+  }
+
+  function toggleVisibleForms() {
+    const visibleIds = filteredLeads.map(lead => lead.session_id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedForms.has(id));
+    setSelectedForms(current => {
+      const next = new Set(current);
+      visibleIds.forEach(id => allSelected ? next.delete(id) : next.add(id));
+      return next;
+    });
+  }
 
   function exportCsv() {
     const headers = [
@@ -442,19 +477,19 @@ export default function AdminPage() {
   return (
     <main className={styles.dashboard}>
       <aside className={styles.sidebar}>
-        <div className={styles.logo}>VS</div>
+        <Image className={styles.adminProfilePhoto} src="/profile.jpg" alt="Vitória Serafim" width={48} height={48} priority />
         <div>
           <strong>Vitória Serafim</strong>
           <span>Relacionamento e acompanhamento</span>
         </div>
         <nav>
-          <a className={tab==='analytics'?styles.active:''} onClick={()=>setTab('analytics')} href="#visao-geral">
+          <a className={view==='overview'?styles.active:''} onClick={()=>goToView('overview')} href="#visao-geral">
             Visão geral
           </a>
-          <a href="#funil" onClick={()=>setTab('analytics')}>Funil</a>
-          <a href="#respostas" onClick={()=>setTab('analytics')}>Respostas</a>
-          <a href="#formularios" onClick={()=>setTab('analytics')}>Formulários</a>
-          <a href="#pacientes" className={tab==='patients'?styles.active:''} onClick={()=>{setTab('patients');window.scrollTo({top:0});}}>Pacientes</a>
+          <a className={view==='funnel'?styles.active:''} href="#funil" onClick={()=>goToView('funnel')}>Funil</a>
+          <a className={view==='responses'?styles.active:''} href="#respostas" onClick={()=>goToView('responses')}>Respostas</a>
+          <a className={view==='forms'?styles.active:''} href="#formularios" onClick={()=>goToView('forms')}>Formulários</a>
+          <a href="#pacientes" className={view==='patients'?styles.active:''} onClick={()=>goToView('patients')}>Pacientes</a>
         </nav>
         <button
           className={styles.signOut}
@@ -466,11 +501,11 @@ export default function AdminPage() {
       </aside>
 
       <section className={styles.content}>
-        {tab==='patients'?<Patients client={supabase} seed={patientSeed} onSeedHandled={clearPatientSeed}/>:<>
+        {view==='patients'?<Patients client={supabase} seed={patientSeed} onSeedHandled={clearPatientSeed}/>:<>
         <header className={styles.topbar}>
           <div>
-            <p className={styles.eyebrow}>Painel de conversão</p>
-            <h1>Desempenho do formulário</h1>
+            <p className={styles.eyebrow}>{adminViews[view].eyebrow}</p>
+            <h1>{adminViews[view].title}</h1>
           </div>
           <div className={styles.filters}>
             <select
@@ -494,7 +529,7 @@ export default function AdminPage() {
           <div className={styles.loading}>Calculando os indicadores...</div>
         ) : (
           <>
-            <section className={styles.kpis} id="visao-geral">
+            {view==='overview' && <section className={styles.kpis} id="visao-geral">
               <article>
                 <span>Formulários iniciados</span>
                 <strong>{analysis.started}</strong>
@@ -509,7 +544,7 @@ export default function AdminPage() {
                 <span>Possíveis abandonos</span>
                 <strong>{analysis.abandoned}</strong>
                 <small>
-                  Sem resposta há 30 minutos ou mais
+                  Sem resposta há {FUNNEL_INACTIVITY_MINUTES} minutos ou mais
                 </small>
               </article>
               <article>
@@ -517,9 +552,9 @@ export default function AdminPage() {
                 <strong>{analysis.averageMinutes.toFixed(1)} min</strong>
                 <small>Entre o início e a conclusão</small>
               </article>
-            </section>
+            </section>}
 
-            <section className={styles.gridTwo} id="funil">
+            {view==='funnel' && <section className={styles.gridTwo} id="funil">
               <article className={styles.panel}>
                 <div className={styles.panelHeader}>
                   <div>
@@ -565,9 +600,9 @@ export default function AdminPage() {
                   </p>
                 )}
               </article>
-            </section>
+            </section>}
 
-            <section className={styles.answersSection} id="respostas">
+            {view==='responses' && <><section className={styles.answersSection} id="respostas">
               <div className={styles.sectionTitle}>
                 <p className={styles.eyebrow}>Perfil das respostas</p>
                 <h2>O que as pessoas estão respondendo</h2>
@@ -603,7 +638,8 @@ export default function AdminPage() {
             </section>
 
             <Contacts events={events} leads={leads} client={supabase} onDeleted={()=>void loadData()} onPatient={startPatient} />
-            <section className={styles.panel} id="formularios">
+            </>}
+            {view==='forms' && <section className={styles.panel} id="formularios">
               <div className={styles.tableHeader}>
                 <div>
                   <p className={styles.eyebrow}>Leads concluídos</p>
@@ -623,12 +659,28 @@ export default function AdminPage() {
                   >
                     Exportar CSV
                   </button>
+                  {selectedForms.size > 0 && <button
+                    className={styles.dangerButton}
+                    onClick={()=>setDeleting({ids:Array.from(selectedForms),name:`${selectedForms.size} formulários selecionados`})}
+                    type="button"
+                  >
+                    Excluir selecionados ({selectedForms.size})
+                  </button>}
                 </div>
               </div>
               <div className={styles.tableWrap}>
                 <table>
                   <thead>
                     <tr>
+                      <th>
+                        <input
+                          aria-label="Selecionar todos os formulários visíveis"
+                          checked={filteredLeads.length > 0 && filteredLeads.every(lead=>selectedForms.has(lead.session_id))}
+                          className={styles.rowCheckbox}
+                          onChange={toggleVisibleForms}
+                          type="checkbox"
+                        />
+                      </th>
                       <th>Data</th>
                       <th>Contato</th>
                       <th>Local</th>
@@ -640,6 +692,7 @@ export default function AdminPage() {
                   <tbody>
                     {filteredLeads.map((lead) => (
                       <tr key={lead.id}>
+                        <td><input aria-label={`Selecionar formulário de ${lead.nome}`} checked={selectedForms.has(lead.session_id)} className={styles.rowCheckbox} onChange={()=>toggleForm(lead.session_id)} type="checkbox" /></td>
                         <td>{formatDate(lead.criado_em)}</td>
                         <td>
                           <strong>{lead.nome}</strong>
@@ -662,7 +715,7 @@ export default function AdminPage() {
                             {lead.respostas.tempo || "Tempo não informado"}
                           </small>
                         </td>
-                        <td><button onClick={()=>startPatient({sessionId:lead.session_id,name:lead.nome,phone:lead.whatsapp})}>Iniciar acompanhamento</button>{' '}<button onClick={()=>setDeleting({id:lead.session_id,name:lead.nome})}>Excluir</button></td>
+                        <td><button onClick={()=>startPatient({sessionId:lead.session_id,name:lead.nome,phone:lead.whatsapp})}>Iniciar acompanhamento</button>{' '}<button onClick={()=>setDeleting({ids:[lead.session_id],name:lead.nome})}>Excluir</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -673,11 +726,11 @@ export default function AdminPage() {
                   </p>
                 )}
               </div>
-            </section>
+            </section>}
           </>
         )}
         </>}
-        {deleting&&<DeleteForm client={supabase} sessionId={deleting.id} name={deleting.name} onClose={()=>setDeleting(null)} onDeleted={()=>{setDeleting(null);void loadData();}}/>}
+        {deleting&&<DeleteForm client={supabase} sessionIds={deleting.ids} name={deleting.name} onClose={()=>setDeleting(null)} onDeleted={()=>{setSelectedForms(current=>{const next=new Set(current);deleting.ids.forEach(id=>next.delete(id));return next;});setDeleting(null);void loadData();}}/>}
       </section>
     </main>
   );
