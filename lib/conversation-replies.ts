@@ -71,15 +71,18 @@ export function durationReply(context: Context): string {
   return replies[context.tempo] ?? "Obrigada por me contar há quanto tempo isso faz parte da sua rotina.";
 }
 
-const attemptReplies: Record<string, string> = {
-  "Cortou açúcar e carboidratos": "Você já tentou cortar açúcar e carboidratos. Muitas pacientes já relataram isso, mas existem estratégias que precisam estar alinhadas para que dê certo. Cortar totalmente não é para todas, depende da realidade de cada uma. É isso que vamos analisar juntas.",
-  "Protocolo da internet": "Você tentou seguir um protocolo da internet. Normalmente, as pacientes que relatam isso dizem que desistiram na primeira ou segunda semana, justamente porque um protocolo da internet não foi feito especificamente para você, para a sua rotina e para as intercorrências que podem acontecer. Mas vamos construir seu próprio protocolo juntas.",
-  "Passou por médico ou nutri": "Se você já buscou ajuda profissional antes, vamos conversar sobre as orientações que recebeu, o que deu certo, o que não conseguiu manter, o que foi fácil, o que foi difícil e, claro, o motivo de não ter dado certo antes e quais mudanças precisaremos fazer para que dê certo dessa vez.",
-  "Remédio pra emagrecer": "Você já tentou um remédio para emagrecer. Isso é muito comum hoje em dia. Entenda: o uso de remédios com acompanhamento médico e nutricional é totalmente válido. Inclusive, se você quer ou precisa continuar com o uso, fico feliz em ter me procurado. O erro é achar que o remédio sozinho consegue os resultados por você; ele vai auxiliar, assim como o médico e o nutricionista auxiliam. 90% do seu resultado depende apenas de você.",
-  "Chás e shots matinais": "Se você já tentou incluir chás e shots matinais na rotina, saiba que eu não sou contra. Se você gosta, podemos incluir no seu protocolo. Você só precisa ter consciência de que os resultados não vêm apenas deles, mas do conjunto de estratégias que vamos usar.",
-  "Ainda nada": "Eu amo essa resposta, sabe por quê? Isso me diz muito sobre o seu perfil de paciente: aquela que reconhece que precisa de ajuda, tira todas as dúvidas comigo, confia no que eu digo, coloca em prática e vê resultados. Não vai atrás de coisas aleatórias na internet, porque sabe que tratamentos de saúde são individualizados. Gosto muito de trabalhar com esse perfil de paciente e espero que eu esteja certa sobre você. Ansiosa para saber.",
+const attemptReplies: Record<string, string[]> = {
+  "Cortou açúcar e carboidratos": ["Você já tentou cortar açúcar e carboidratos. Muitas pacientes já relataram isso, mas existem estratégias que precisam estar alinhadas para que dê certo. Cortar totalmente não é para todas, depende da realidade de cada uma. É isso que vamos analisar juntas."],
+  "Protocolo da internet": ["Você tentou seguir um protocolo da internet. Normalmente, as pacientes que relatam isso dizem que desistiram na primeira ou segunda semana, justamente porque um protocolo da internet não foi feito especificamente para você, para a sua rotina e para as intercorrências que podem acontecer. Mas vamos construir seu próprio protocolo juntas."],
+  "Passou por médico ou nutri": ["Se você já buscou ajuda profissional antes, vamos conversar sobre as orientações que recebeu, o que deu certo, o que não conseguiu manter, o que foi fácil, o que foi difícil e, claro, o motivo de não ter dado certo antes e quais mudanças precisaremos fazer para que dê certo dessa vez."],
+  "Remédio pra emagrecer": [
+    "Você já tentou um remédio para emagrecer. Isso é muito comum hoje em dia. Entenda: o uso de remédios com acompanhamento médico e nutricional é totalmente válido. Inclusive, se você quer ou precisa continuar com o uso, fico feliz em ter me procurado.",
+    "O erro é achar que o remédio sozinho consegue os resultados por você; ele vai auxiliar, assim como o médico e o nutricionista auxiliam. 90% do seu resultado depende apenas de você.",
+  ],
+  "Chás e shots matinais": ["Se você já tentou incluir chás e shots matinais na rotina, saiba que eu não sou contra. Se você gosta, podemos incluir no seu protocolo. Você só precisa ter consciência de que os resultados não vêm apenas deles, mas do conjunto de estratégias que vamos usar."],
+  "Ainda nada": ["Eu amo essa resposta, sabe por quê? Isso me diz muito sobre o seu perfil de paciente: aquela que reconhece que precisa de ajuda, tira todas as dúvidas comigo, confia no que eu digo, coloca em prática e vê resultados. Não vai atrás de coisas aleatórias na internet, porque sabe que tratamentos de saúde são individualizados. Gosto muito de trabalhar com esse perfil de paciente e espero que eu esteja certa sobre você. Ansiosa para saber."],
 };
 
-export function attemptReply(value: string, _context: Context): string {
-  return attemptReplies[value] ?? "Quero entender sua experiência e o que faz sentido para a sua rotina.";
+export function attemptReply(value: string, _context: Context): string[] {
+  return attemptReplies[value] ?? ["Quero entender sua experiência e o que faz sentido para a sua rotina."];
 }
