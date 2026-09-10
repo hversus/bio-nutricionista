@@ -217,11 +217,13 @@ function Icon({
 function PickerSheet({
   type,
   initial,
+  hasDiagnosis = false,
   onClose,
   onChoose,
 }: {
   type: Exclude<Picker, null>;
   initial: string[];
+  hasDiagnosis?: boolean;
   onClose: () => void;
   onChoose: (values: string[]) => void;
 }) {
@@ -237,7 +239,9 @@ function PickerSheet({
     type === "sintomas"
       ? "O que você sente hoje?"
       : type === "tempo"
-        ? "Há quanto tempo é assim?"
+        ? hasDiagnosis
+          ? "Há quanto tempo tem o diagnóstico?"
+          : "Há quanto tempo você sente isso?"
         : "O que você já tentou?";
   const subtitle =
     type === "sintomas"
@@ -385,10 +389,14 @@ export default function Home() {
         nextStage.current = saved.nextStage;
         updateLead(saved.data);
         const resume = saved.nextStage as Stage;
+        const hasDiagnosis = Array.isArray(saved.data.sintomas) && saved.data.sintomas.includes("Já tenho diagnóstico");
+        const pendingQuestion = resume === "tempo" && hasDiagnosis
+          ? "Há quanto tempo tem o diagnóstico?"
+          : questions[resume];
         setMessages([
           { id: ++messageId.current, from: "lu", content: "Vamos continuar de onde você parou. Suas respostas anteriores foram recuperadas neste navegador." },
           ...Object.entries(saved.data).filter(([key, value]) => key !== "decisao" && value !== "" && value !== null && (!Array.isArray(value) || value.length)).map(([key, value]) => ({ id: ++messageId.current, from: "voce" as const, content: `${questions[key] || key}: ${Array.isArray(value) ? value.join(", ") : typeof value === "boolean" ? (value ? "Fora do Brasil" : "Brasil") : String(value)}` })),
-          { id: ++messageId.current, from: "lu", content: resume === "decisao" ? `Acompanhamento de 90 dias: ${saved.data.fora ? "300€" : "R$ 1.497 no Pix ou 12x de R$ 150"}. Quer começar seu acompanhamento?` : questions[resume] },
+          { id: ++messageId.current, from: "lu", content: resume === "decisao" ? `Acompanhamento de 90 dias: ${saved.data.fora ? "300€" : "12x de R$ 150 ou R$ 1.497 no Pix"}. Quer começar seu acompanhamento?` : pendingQuestion },
         ]);
         setStage(resume);
         trackFunnel(sessionId.current, "step_viewed", resume, stages.indexOf(resume) + 1);
@@ -483,7 +491,12 @@ export default function Home() {
     trackFunnel(sessionId.current, "answered", "sintomas", 2, values);
     setStage("intro");
     await addLu(symptomReply({ ...leadRef.current, sintomas: values }), 900);
-    await addLu("Há quanto tempo você sente isso?", 700);
+    await addLu(
+      values.includes("Já tenho diagnóstico")
+        ? "Há quanto tempo você tem o diagnóstico?"
+        : "Há quanto tempo você sente isso?",
+      700,
+    );
     setStage("tempo");
     trackFunnel(sessionId.current, "step_viewed", "tempo", 3);
   }
@@ -512,8 +525,17 @@ export default function Home() {
     await addLu(attemptReply(value, leadRef.current), 1300);
     await addLu(
       <>
-        Quero conhecer sua alimentação, seus sintomas e sua rotina para
-        conversar sobre um acompanhamento individualizado:
+        Antes de falarmos de valores, quero deixar claro que meu objetivo é
+        trabalhar apenas com mulheres que estejam dispostas a participar
+        ativamente do processo e construir hábitos e uma alimentação que ajudem
+        na própria saúde metabólica. Por isso, não aceito qualquer pessoa como
+        paciente.
+        <p className="mt">
+          Essa conversa não garante uma vaga no acompanhamento. É apenas a etapa
+          inicial, em que posso entender melhor você e o seu momento para saber
+          se faz sentido trabalharmos juntas.
+        </p>
+        <p className="mt">Meu acompanhamento funciona assim:</p>
         <ul className="lista">
           <li>
             <b>90 dias</b> · Acompanhamento próximo, 100% online, com protocolo
@@ -521,6 +543,9 @@ export default function Home() {
           </li>
           <li>
             <b>3 consultas</b> · Por videochamada, uma a cada 30 dias
+          </li>
+          <li>
+            <b>Análise e acompanhamento de exames</b>
           </li>
           <li>
             <b>Ajustes a cada 7-15 dias</b> · Conforme o seu corpo responde
@@ -568,13 +593,9 @@ export default function Home() {
     const outside = !!leadRef.current.fora;
     await addLu(
       <>
-        {firstName(leadRef.current.nome)}, agora que te conheço um pouco melhor,
-        quero te apresentar o meu <b>acompanhamento nutricional de 90 dias</b>.
-        <p className="mt">
-          Vamos conversar sobre seu histórico, seus sintomas, o que você já tentou
-          e os exames que você já tem, para construir um plano individualizado
-          e acompanhar sua evolução.
-        </p>
+        {firstName(leadRef.current.nome)}, agora que você chegou até aqui e
+        entendeu como funciona, vamos falar sobre os valores do meu
+        acompanhamento nutricional.
       </>,
       1300,
     );
@@ -586,12 +607,12 @@ export default function Home() {
             <span>
               Acompanhamento de 90 dias{outside ? " (fora do Brasil)" : ""}
             </span>
-            <b>{outside ? "300€" : "R$ 1.497 no Pix"}</b>
+            <b>{outside ? "300€" : "12x de R$ 150 no cartão"}</b>
           </div>
           {!outside && (
             <div className="l">
-              <span>ou no cartão</span>
-              <b>12x de R$ 150</b>
+              <span>ou</span>
+              <b>R$ 1.497 no Pix</b>
             </div>
           )}
         </div>
@@ -653,13 +674,13 @@ export default function Home() {
         kind === "direto" ? (
           <>
             Obrigada por me contar tudo isso, {name}. Eu mesma vou te chamar no
-            WhatsApp pra gente combinar o começo dos seus 90 dias. Se quiser
+            WhatsApp pra gente combinar o começo do seu acompanhamento. Se quiser
             adiantar, me chama por aqui que a mensagem já vai pronta.
           </>
         ) : (
           <>
-            Tudo bem, {name}. Guardei o que você escreveu, e quando você estiver
-            pronta eu estou aqui.
+            Tudo bem, {name}. Guardei o que você escreveu, e quando fizer
+            sentido eu estou aqui para te ajudar.
           </>
         ),
         1200,
@@ -911,6 +932,7 @@ export default function Home() {
         )}
         {picker === "tempo" && (
           <PickerSheet
+            hasDiagnosis={lead.sintomas.includes("Já tenho diagnóstico")}
             initial={lead.tempo ? [lead.tempo] : []}
             onChoose={(values) => chooseDuration(values[0])}
             onClose={() => setPicker(null)}
