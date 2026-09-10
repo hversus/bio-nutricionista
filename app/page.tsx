@@ -527,20 +527,21 @@ export default function Home() {
     addMine(value);
     trackFunnel(sessionId.current, "answered", "tentou", 4, value);
     setStage("intro");
-    await addLu(attemptReply(value, leadRef.current), 1300);
+    for (const message of attemptReply(value, leadRef.current)) {
+      await addLu(message, 1300);
+    }
     await addLu(
       <>
-        Antes de falarmos de valores, quero deixar claro que meu objetivo é
-        trabalhar apenas com mulheres que estejam dispostas a participar
-        ativamente do processo e construir hábitos e uma alimentação que ajudem
-        na própria saúde metabólica. Por isso, não aceito qualquer pessoa como
-        paciente.
-        <p className="mt">
-          Essa conversa não garante uma vaga no acompanhamento. É apenas a etapa
-          inicial, em que posso entender melhor você e o seu momento para saber
-          se faz sentido trabalharmos juntas.
-        </p>
-        <p className="mt">Meu acompanhamento funciona assim:</p>
+        Antes de falar de valores, gosto de explicar que busco trabalhar apenas
+        com mulheres dispostas a participar ativamente do processo e cuidar da
+        sua saúde metabólica. Por isso, é importante essa conversa inicial, em
+        que avalio se faz sentido trabalharmos juntas.
+      </>,
+      1200,
+    );
+    await addLu(
+      <>
+        Meu acompanhamento funciona assim:
         <ul className="lista">
           <li>
             <b>90 dias</b> · Acompanhamento próximo, 100% online, com protocolo
